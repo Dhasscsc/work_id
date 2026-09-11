@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>தாஸ் பணி பதிவு | Dhass Work Order</title>
+<style>
+  :root{
+    --brand:#0f4c81; --brand-dark:#0a3457; --accent:#e8a33d; --accent2:#1d8a5e;
+    --danger:#c0392b; --bg:#f2f5f8; --card:#ffffff; --border:#dbe3ea; --text:#1f2d3a; --muted:#6b7c8c;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Noto Sans Tamil","Latha","Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+  header{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;padding:16px 20px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  header h1{margin:0;font-size:20px;}
+  header p{margin:2px 0 0;font-size:12px;opacity:.85;}
+  nav{display:flex;gap:6px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:64px;z-index:49;overflow-x:auto;}
+  nav button{border:none;background:#eef2f6;color:var(--text);padding:9px 16px;border-radius:20px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:600;}
+  nav button.active{background:var(--brand);color:#fff;}
+  main{max-width:980px;margin:0 auto;padding:16px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .card h2{margin:0 0 12px;font-size:17px;color:var(--brand-dark);border-bottom:2px solid var(--accent);padding-bottom:6px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:var(--muted);}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;color:var(--text);}
+  input:read-only,input:disabled{background:#f0f3f6;color:var(--muted);}
+  textarea{resize:vertical;min-height:60px;}
+  .field{margin-bottom:10px;}
+  .row-inline{display:flex;gap:8px;align-items:center;}
+  .btn{border:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;}
+  .btn-primary{background:var(--brand);color:#fff;}
+  .btn-accent{background:var(--accent2);color:#fff;}
+  .btn-warn{background:var(--accent);color:#3a2c0b;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-outline{background:#fff;border:1px solid var(--brand);color:var(--brand);}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;}
+  .pill.pending{background:#fdecea;color:#c0392b;}
+  .pill.progress{background:#fef6e6;color:#9a6b0c;}
+  .pill.done{background:#e8f7ee;color:#1d8a5e;}
+  .pill.cancel{background:#eceff1;color:#607080;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;}
+  th{background:#f6f9fb;color:var(--brand-dark);position:sticky;top:0;}
+  .table-wrap{overflow-x:auto;max-height:70vh;overflow-y:auto;}
+  .actions-cell{display:flex;gap:4px;flex-wrap:wrap;}
+  .search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .search-bar input,.search-bar select{flex:1;min-width:140px;}
+  .master-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+  .master-row{display:flex;gap:6px;align-items:center;background:#f6f9fb;padding:6px 8px;border-radius:8px;}
+  .master-row span{flex:1;font-size:14px;}
+  .sigpad{border:1px solid var(--border);border-radius:8px;touch-action:none;width:100%;height:150px;background:#fff;}
+  .thumb{width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;}
+  .doclist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .doc-chip{background:#eef2f6;padding:4px 8px;border-radius:6px;font-size:12px;display:flex;gap:6px;align-items:center;}
+  .doc-chip a{color:var(--brand);text-decoration:none;font-weight:700;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:14px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:18px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
+  .modal h3{margin-top:0;color:var(--brand-dark);}
+  .close-x{float:left;cursor:pointer;font-size:20px;font-weight:700;color:var(--muted);}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .hint{font-size:11px;color:var(--muted);margin-top:2px;}
+  .balance-box{background:#f6f9fb;border-radius:10px;padding:10px;display:flex;justify-content:space-between;font-weight:700;margin-top:6px;}
+  .balance-box span.neg{color:var(--danger);}
+  .balance-box span.pos{color:var(--accent2);}
+  .section-title{font-size:14px;font-weight:700;color:var(--brand-dark);margin:14px 0 6px;}
+  #outsideWorkBox{display:none;border:1px dashed var(--accent);border-radius:10px;padding:10px;margin-top:10px;background:#fffdf6;}
+  .tag-status{font-weight:700;}
+  @media print{
+    header,nav,.no-print{display:none!important;}
+    body{background:#fff;}
+    main{padding:0;max-width:100%;}
+  }
+  #receiptArea{display:none;}
+  .sync-status{font-size:12px;color:var(--muted);}
+  .req{color:var(--danger);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧾 தாஸ் பொது சேவை மையம் — பணி பதிவேடு</h1>
+  <p>Dhass Public Service Center — Work Order Register</p>
+</header>
+
+<nav class="no-print">
+  <button data-tab="new" class="active">➕ புதிய பணி</button>
+  <button data-tab="list">📋 பணிகள் பட்டியல்</button>
+  <button data-tab="admin">🛠️ நிர்வாகம்</button>
+</nav>
+
+<main>
+
+<!-- ===================== NEW WORK ORDER TAB ===================== -->
+<section id="tab-new">
+  <div class="card">
+    <h2>பணி விவரம்</h2>
+    <div class="grid">
+      <div class="field">
+        <label>நாள்</label>
+        <input type="text" id="f_date" readonly>
+      </div>
+      <div class="field">
+        <label>நேரம்</label>
+        <input type="text" id="f_time" readonly>
+      </div>
+      <div class="field">
+        <label>பணி எண்</label>
+        <input type="text" id="f_dhsid" readonly>
+      </div>
+      <div class="field">
+        <label>சேவை நிலை</label>
+        <select id="f_status">
+          <option value="பெண்டிங்">பெண்டிங்</option>
+          <option value="நடைபெறுகிறது">நடைபெறுகிறது</option>
+          <option value="முடிந்தது">முடிந்தது</option>
+          <option value="ரத்து செய்யப்பட்டது">ரத்து செய்யப்பட்டது</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>வாடிக்கையாளர் பெயர் <span class="req">*</span></label>
+        <input type="text" id="f_custname" placeholder="பெயர் உள்ளிடவும்">
+      </div>
+      <div class="field">
+        <label>செல் நம்பர் <span class="req">*</span></label>
+        <input type="tel" id="f_mobile" maxlength="10" placeholder="10 இலக்க எண்">
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>வேலை வகை <span class="req">*</span></label>
+        <select id="f_worktype"></select>
+      </div>
+      <div class="field">
+        <label>சேவை வகை</label>
+        <select id="f_svccat"></select>
+      </div>
+      <div class="field">
+        <label>சேவை பெயர்</label>
+        <select id="f_svcname"></select>
+      </div>
+      <div class="field">
+        <label>பணியாளர் பெயர்</label>
+        <select id="f_staff"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>குறிப்பு எண் (Application / Enrollment No.)</label>
+      <input type="text" id="f_refno" placeholder="குறிப்பு எண்">
+    </div>
+
+    <div class="section-title">வாடிக்கையாளர் கட்டணம்</div>
+    <div class="grid">
+      <div class="field">
+        <label>சேவை கட்டணம் (₹)</label>
+        <input type="number" id="f_fee" value="0" min="0">
+      </div>
+      <div class="field">
+        <label>அட்வான்ஸ் (₹)</label>
+        <input type="number" id="f_advance" value="0" min="0">
+      </div>
+    </div>
+    <div class="balance-box">
+      <span>பேலன்ஸ் (வாடிக்கையாளர் தர வேண்டியது)</span>
+      <span id="f_balance_display">₹0</span>
+    </div>
+
+    <div id="outsideWorkBox">
+      <div class="section-title" style="margin-top:0;">🚗 வெளி வேலை — பணியாளர் கட்டணம்</div>
+      <div class="grid">
+        <div class="field">
+          <label>பணியாளர் வேலை கட்டணம் (₹)</label>
+          <input type="number" id="f_staff_fee" value="0" min="0">
+        </div>
+        <div class="field">
+          <label>பணியாளர் அட்வான்ஸ் (₹)</label>
+          <input type="number" id="f_staff_advance" value="0" min="0">
+        </div>
+      </div>
+      <div class="balance-box">
+        <span>பணியாளருக்கு தர வேண்டிய பேலன்ஸ்</span>
+        <span id="f_staff_balance_display">₹0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>புகைப்படம் &amp; கையெழுத்து</h2>
+    <div class="grid">
+      <div class="field">
+        <label>வாடிக்கையாளர் புகைப்படம்</label>
+        <input type="file" id="f_photo" accept="image/*" capture="environment">
+        <div id="photoPreviewWrap"></div>
+      </div>
+      <div class="field">
+        <label>கையெழுத்து</label>
+        <canvas id="sigpad" class="sigpad"></canvas>
+        <div class="row-inline" style="margin-top:6px;">
+          <button type="button" class="btn btn-outline btn-sm" id="sigClear">🧹 அழி</button>
+          <span class="hint">விரலால் / மவுஸால் கையெழுத்திடவும்</span>
+        </div>
+        <div class="field" style="margin-top:8px;">
+          <label>அல்லது கையெழுத்து படமாக பதிவேற்று</label>
+          <input type="file" id="f_signature" accept="image/*" capture="environment">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ஆவணங்கள்</h2>
+    <div class="grid">
+      <div class="field">
+        <label>வேலை ஆவணம் (பலவும் தேர்வு செய்யலாம்)</label>
+        <input type="file" id="f_workdoc" multiple>
+        <div class="doclist" id="workDocList"></div>
+      </div>
+      <div class="field">
+        <label>முடிந்த ஆவணம்</label>
+        <input type="file" id="f_donedoc" multiple>
+        <div class="doclist" id="doneDocList"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>குறிப்புகள்</label>
+      <textarea id="f_notes" placeholder="கூடுதல் குறிப்புகள்..."></textarea>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <div class="row-inline" style="flex-wrap:wrap;gap:10px;">
+      <button class="btn btn-primary" id="saveBtn">💾 பதிவு செய்</button>
+      <button class="btn btn-outline" id="resetBtn">↺ புதிதாக</button>
+      <button class="btn btn-accent" id="whatsappBtn" disabled>📤 WhatsApp அனுப்பு</button>
+      <button class="btn btn-warn" id="printReceiptBtn" disabled>🖨️ இரசீது பிரிண்ட்</button>
+    </div>
+    <p class="hint" id="saveHint">பதிவு செய்த பின் WhatsApp / இரசீது பொத்தான்கள் இயங்கும்.</p>
+  </div>
+</section>
+
+<!-- ===================== RECORDS LIST TAB ===================== -->
+<section id="tab-list" style="display:none;">
+  <div class="card">
+    <h2>பணிகள் பட்டியல்</h2>
+    <div class="search-bar">
+      <input type="text" id="searchBox" placeholder="🔍 பெயர் / மொபைல் / பணி எண் தேடு...">
+      <select id="filterStatus">
+        <option value="">அனைத்து நிலை</option>
+        <option value="பெண்டிங்">பெண்டிங்</option>
+        <option value="நடைபெறுகிறது">நடைபெறுகிறது</option>
+        <option value="முடிந்தது">முடிந்தது</option>
+        <option value="ரத்து செய்யப்பட்டது">ரத்து செய்யப்பட்டது</option>
+      </select>
+      <select id="filterWorktype"><option value="">அனைத்து வேலை வகை</option></select>
+      <button class="btn btn-outline btn-sm" id="exportBtn">⬇️ Export JSON</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>பணி எண்</th><th>நாள்</th><th>வாடிக்கையாளர்</th><th>மொபைல்</th>
+          <th>வேலை வகை</th><th>சேவை</th><th>பணியாளர்</th><th>கட்டணம்</th><th>பேலன்ஸ்</th><th>நிலை</th><th>செயல்கள்</th>
+        </tr></thead>
+        <tbody id="recordsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ADMIN TAB ===================== -->
+<section id="tab-admin" style="display:none;">
+  <div class="card" id="adminGate">
+    <h2>நிர்வாக அனுமதி</h2>
+    <div class="field">
+      <label>நிர்வாக கடவுச்சொல்</label>
+      <input type="password" id="adminPass" placeholder="கடவுச்சொல் உள்ளிடவும்">
+    </div>
+    <button class="btn btn-primary" id="adminLoginBtn">உள்நுழை</button>
+  </div>
+
+  <div id="adminPanel" style="display:none;">
+    <div class="card">
+      <h2>வேலை வகை நிர்வாகம்</h2>
+      <div class="row-inline"><input type="text" id="new_worktype" placeholder="புதிய வேலை வகை"><button class="btn btn-primary btn-sm" onclick="addMaster('workTypes','new_worktype')">➕ சேர்</button></div>
+      <div class="master-list" id="list_workTypes"></div>
+    </div>
+    <div class="card">
+      <h2>சேவை வகை நிர்வாகம்</h2>
+      <div class="row-inline"><input type="text" id="new_svccat" placeholder="புதிய சேவை வகை"><button class="btn btn-primary btn-sm" onclick="addMaster('serviceCategories','new_svccat')">➕ சேர்</button></div>
+      <div class="master-list" id="list_serviceCategories"></div>
+    </div>
+    <div class="card">
+      <h2>சேவை பெயர் நிர்வாகம் <span class="hint">(சேவை வகையின் கீழ் துணை சேவை)</span></h2>
+      <div class="field">
+        <label>சேவை வகை தேர்வு செய்யவும்</label>
+        <select id="admin_svcname_cat" onchange="renderSvcNameListInAdmin()"></select>
+      </div>
+      <div class="row-inline" id="svcNameAddRow" style="display:none;">
+        <input type="text" id="new_svcname" placeholder="புதிய சேவை பெயர்">
+        <button class="btn btn-primary btn-sm" onclick="addSvcName()">➕ சேர்</button>
+      </div>
+      <div class="master-list" id="list_serviceNamesUnderCat"></div>
+    </div>
+    <div class="card">
+      <h2>பணியாளர் நிர்வாகம்</h2>
+      <div class="row-inline"><input type="text" id="new_staff" placeholder="புதிய பணியாளர் பெயர்"><button class="btn btn-primary btn-sm" onclick="addMaster('staffNames','new_staff')">➕ சேர்</button></div>
+      <div class="master-list" id="list_staffNames"></div>
+    </div>
+
+    <div class="card">
+      <h2>☁️ Cloud Sync (Google Apps Script)</h2>
+      <p class="hint">கோப்புகளை Google Drive-க்கு பதிவேற்றவும், பணி பட்டியலை பல கணினிகளில் காணவும் இதை அமைக்கவும். README.md-ல் உள்ள படிகளைப் பின்பற்றி Apps Script-ஐ Deploy செய்து கீழே அதன் Web App URL-ஐ ஒட்டவும்.</p>
+      <div class="field">
+        <label>Apps Script Web App URL</label>
+        <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec">
+      </div>
+      <div class="row-inline">
+        <button class="btn btn-primary btn-sm" id="saveScriptUrlBtn">💾 சேமி</button>
+        <button class="btn btn-accent btn-sm" id="syncNowBtn">🔄 இப்போதே Sync</button>
+        <span class="sync-status" id="syncStatusText">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ தரவு மேலாண்மை</h2>
+      <div class="row-inline">
+        <button class="btn btn-outline btn-sm" id="exportAllBtn">⬇️ முழு தரவு Export</button>
+        <button class="btn btn-danger btn-sm" id="logoutAdminBtn">🔒 நிர்வாகத்திலிருந்து வெளியேறு</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Detail / Edit Modal -->
+<div class="modal-bg" id="detailModalBg">
+  <div class="modal">
+    <span class="close-x" onclick="closeModal()">×</span>
+    <h3>பணி விவரம்</h3>
+    <div id="detailModalBody"></div>
+  </div>
+</div>
+
+<div id="receiptArea"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const ADMIN_PASSWORD = "Dhass@9950"; // நிர்வாக கடவுச்சொல்
+const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0EjAA4TyC7gXQgZK7akjN3jBrggYFo9mcJk9-utzjaFXDfEOqpdcN_y51tcn4Jt1wNg/exec";
+let SCRIPT_URL = localStorage.getItem('dhass_wo_script_url') || DEFAULT_SCRIPT_URL; // Apps Script Web App URL
+
+/* ===================== TOAST ===================== */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ===================== INDEXEDDB SETUP ===================== */
+let db;
+const DB_NAME='dhassWorkOrdersDB', DB_VERSION=1, STORE='records';
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=(e)=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE)){
+        const os=d.createObjectStore(STORE,{keyPath:'id'});
+        os.createIndex('mobile','mobile',{unique:false});
+        os.createIndex('status','status',{unique:false});
+      }
+    };
+    req.onsuccess=(e)=>{db=e.target.result;resolve(db);};
+    req.onerror=(e)=>reject(e);
+  });
+}
+function dbPut(record){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(record);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=(e)=>reject(e);
+  });
+}
+function dbDelete(id){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=(e)=>reject(e);
+  });
+}
+function dbGetAll(){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=(e)=>reject(e);
+  });
+}
+
+/* ===================== MASTER DATA (localStorage) ===================== */
+const MASTER_KEYS=['workTypes','serviceCategories','staffNames']; // serviceNames நிர்வாகம் தனியாக (category-வாரியாக)
+function loadMasters(){
+  let workTypes = JSON.parse(localStorage.getItem('dhass_wo_workTypes')||'null');
+  if(!workTypes){ workTypes=['கடை வேலை','வெளி வேலை']; localStorage.setItem('dhass_wo_workTypes',JSON.stringify(workTypes)); }
+  let serviceCategories = JSON.parse(localStorage.getItem('dhass_wo_serviceCategories')||'[]');
+  let staffNames = JSON.parse(localStorage.getItem('dhass_wo_staffNames')||'[]');
+  // serviceNamesByCat: { "சேவை வகை பெயர்": ["சேவை பெயர் 1","சேவை பெயர் 2", ...] }
+  let serviceNamesByCat = JSON.parse(localStorage.getItem('dhass_wo_serviceNamesByCat')||'null');
+  if(!serviceNamesByCat){
+    serviceNamesByCat = {};
+    // பழைய flat பட்டியல் இருந்தால், "பொது" என்ற வகையின் கீழ் இடம்பெயர்க்கவும் (one-time migration)
+    const oldFlat = JSON.parse(localStorage.getItem('dhass_wo_serviceNames')||'null');
+    if(oldFlat && oldFlat.length){
+      if(!serviceCategories.includes('பொது')) serviceCategories.push('பொது');
+      serviceNamesByCat['பொது'] = oldFlat;
+      localStorage.setItem('dhass_wo_serviceCategories',JSON.stringify(serviceCategories));
+    }
+    localStorage.setItem('dhass_wo_serviceNamesByCat',JSON.stringify(serviceNamesByCat));
+  }
+  serviceCategories.forEach(cat=>{ if(!serviceNamesByCat[cat]) serviceNamesByCat[cat]=[]; });
+  return {workTypes,serviceCategories,serviceNamesByCat,staffNames};
+}
+function saveMasterList(key,arr){ localStorage.setItem('dhass_wo_'+key, JSON.stringify(arr)); }
+function saveServiceNamesByCat(){ localStorage.setItem('dhass_wo_serviceNamesByCat', JSON.stringify(MASTERS.serviceNamesByCat)); }
+let MASTERS = loadMasters();
+
+function populateSelect(selectEl, arr, placeholder){
+  selectEl.innerHTML='';
+  if(placeholder){
+    const opt=document.createElement('option'); opt.value=''; opt.textContent=placeholder;
+    selectEl.appendChild(opt);
+  }
+  arr.forEach(v=>{
+    const opt=document.createElement('option'); opt.value=v; opt.textContent=v;
+    selectEl.appendChild(opt);
+  });
+}
+function refreshFormSelects(){
+  populateSelect(document.getElementById('f_worktype'), MASTERS.workTypes, '-- தேர்வு செய்யவும் --');
+  populateSelect(document.getElementById('f_svccat'), MASTERS.serviceCategories, '-- தேர்வு செய்யவும் --');
+  refreshServiceNameSelect();
+  populateSelect(document.getElementById('f_staff'), MASTERS.staffNames, '-- தேர்வு செய்யவும் --');
+  const fw=document.getElementById('filterWorktype');
+  fw.innerHTML='<option value="">அனைத்து வேலை வகை</option>';
+  MASTERS.workTypes.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fw.appendChild(o);});
+}
+function refreshServiceNameSelect(){
+  const cat=document.getElementById('f_svccat').value;
+  const names = (cat && MASTERS.serviceNamesByCat[cat]) ? MASTERS.serviceNamesByCat[cat] : [];
+  populateSelect(document.getElementById('f_svcname'), names, cat ? '-- தேர்வு செய்யவும் --' : '-- முதலில் சேவை வகை தேர்வு செய்யவும் --');
+}
+document.getElementById('f_svccat').addEventListener('change', refreshServiceNameSelect);
+
+/* ===================== MASTER CRUD (admin) ===================== */
+function renderMasterList(key){
+  const wrap=document.getElementById('list_'+key);
+  wrap.innerHTML='';
+  MASTERS[key].forEach((val,idx)=>{
+    const row=document.createElement('div'); row.className='master-row';
+    row.innerHTML=`<span>${escapeHtml(val)}</span>
+      <button class="btn btn-outline btn-sm" onclick="editMaster('${key}',${idx})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteMaster('${key}',${idx})">🗑️</button>`;
+    wrap.appendChild(row);
+  });
+}
+function renderAllMasterLists(){ MASTER_KEYS.forEach(renderMasterList); renderSvcCatOptionsInAdmin(); }
+function addMaster(key,inputId){
+  const input=document.getElementById(inputId);
+  const val=input.value.trim();
+  if(!val){toast('மதிப்பு உள்ளிடவும்');return;}
+  MASTERS[key].push(val);
+  saveMasterList(key,MASTERS[key]);
+  input.value='';
+  renderMasterList(key); refreshFormSelects();
+  toast('சேர்க்கப்பட்டது');
+}
+function editMaster(key,idx){
+  const cur=MASTERS[key][idx];
+  const val=prompt('திருத்தவும்:',cur);
+  if(val===null) return;
+  const trimmed=val.trim();
+  if(!trimmed) return;
+  MASTERS[key][idx]=trimmed;
+  saveMasterList(key,MASTERS[key]);
+  if(key==='serviceCategories' && trimmed!==cur){
+    // சேவை வகை பெயர் மாறினால், அதன் கீழ் உள்ள சேவை பெயர்கள் பட்டியலையும் புதிய பெயருக்கு மாற்றவும்
+    MASTERS.serviceNamesByCat[trimmed] = MASTERS.serviceNamesByCat[cur] || [];
+    delete MASTERS.serviceNamesByCat[cur];
+    saveServiceNamesByCat();
+    renderSvcCatOptionsInAdmin();
+  }
+  renderMasterList(key); refreshFormSelects();
+  toast('திருத்தப்பட்டது');
+}
+function deleteMaster(key,idx){
+  if(!confirm('நீக்க வேண்டுமா?')) return;
+  const cur=MASTERS[key][idx];
+  MASTERS[key].splice(idx,1);
+  saveMasterList(key,MASTERS[key]);
+  if(key==='serviceCategories'){
+    delete MASTERS.serviceNamesByCat[cur];
+    saveServiceNamesByCat();
+    renderSvcCatOptionsInAdmin();
+  }
+  renderMasterList(key); refreshFormSelects();
+  toast('நீக்கப்பட்டது');
+}
+
+/* ----- சேவை பெயர் (நுன்னு சேவை) நிர்வாகம் — category-வாரியாக ----- */
+function renderSvcCatOptionsInAdmin(){
+  const sel=document.getElementById('admin_svcname_cat');
+  if(!sel) return;
+  const prevVal=sel.value;
+  sel.innerHTML='<option value="">-- சேவை வகை தேர்வு செய்யவும் --</option>';
+  MASTERS.serviceCategories.forEach(cat=>{
+    const o=document.createElement('option'); o.value=cat; o.textContent=cat; sel.appendChild(o);
+  });
+  if(MASTERS.serviceCategories.includes(prevVal)) sel.value=prevVal;
+  renderSvcNameListInAdmin();
+}
+function renderSvcNameListInAdmin(){
+  const cat=document.getElementById('admin_svcname_cat').value;
+  const wrap=document.getElementById('list_serviceNamesUnderCat');
+  wrap.innerHTML='';
+  document.getElementById('svcNameAddRow').style.display = cat ? 'flex' : 'none';
+  if(!cat){ wrap.innerHTML='<p class="hint">மேலே ஒரு சேவை வகையைத் தேர்வு செய்யவும்.</p>'; return; }
+  const names = MASTERS.serviceNamesByCat[cat] || [];
+  if(!names.length){ wrap.innerHTML='<p class="hint">இன்னும் சேவை பெயர்கள் இல்லை.</p>'; return; }
+  names.forEach((val,idx)=>{
+    const row=document.createElement('div'); row.className='master-row';
+    row.innerHTML=`<span>${escapeHtml(val)}</span>
+      <button class="btn btn-outline btn-sm" onclick="editSvcName(${idx})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSvcName(${idx})">🗑️</button>`;
+    wrap.appendChild(row);
+  });
+}
+function addSvcName(){
+  const cat=document.getElementById('admin_svcname_cat').value;
+  if(!cat){ toast('முதலில் சேவை வகை தேர்வு செய்யவும்'); return; }
+  const input=document.getElementById('new_svcname');
+  const val=input.value.trim();
+  if(!val){ toast('மதிப்பு உள்ளிடவும்'); return; }
+  if(!MASTERS.serviceNamesByCat[cat]) MASTERS.serviceNamesByCat[cat]=[];
+  MASTERS.serviceNamesByCat[cat].push(val);
+  saveServiceNamesByCat();
+  input.value='';
+  renderSvcNameListInAdmin(); refreshFormSelects();
+  toast('சேர்க்கப்பட்டது');
+}
+function editSvcName(idx){
+  const cat=document.getElementById('admin_svcname_cat').value;
+  const cur=MASTERS.serviceNamesByCat[cat][idx];
+  const val=prompt('திருத்தவும்:',cur);
+  if(val===null) return;
+  const trimmed=val.trim();
+  if(!trimmed) return;
+  MASTERS.serviceNamesByCat[cat][idx]=trimmed;
+  saveServiceNamesByCat();
+  renderSvcNameListInAdmin(); refreshFormSelects();
+  toast('திருத்தப்பட்டது');
+}
+function deleteSvcName(idx){
+  if(!confirm('நீக்க வேண்டுமா?')) return;
+  const cat=document.getElementById('admin_svcname_cat').value;
+  MASTERS.serviceNamesByCat[cat].splice(idx,1);
+  saveServiceNamesByCat();
+  renderSvcNameListInAdmin(); refreshFormSelects();
+  toast('நீக்கப்பட்டது');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== DHS NUMBER GENERATOR ===================== */
+function nextDhsId(){
+  let counter = parseInt(localStorage.getItem('dhass_wo_counter')||'0',10);
+  counter += 1;
+  localStorage.setItem('dhass_wo_counter', String(counter));
+  return 'DHS' + String(counter).padStart(4,'0');
+}
+function peekDhsId(){
+  let counter = parseInt(localStorage.getItem('dhass_wo_counter')||'0',10);
+  return 'DHS' + String(counter+1).padStart(4,'0');
+}
+
+/* ===================== FORM STATE ===================== */
+let currentPhoto=null;   // {name, dataUrl, driveLink}
+let currentSignature=null; // {dataUrl, driveLink}
+let currentWorkDocs=[];  // [{name, dataUrl, driveLink}]
+let currentDoneDocs=[];
+let editingId=null; // if editing existing record
+
+function setNowFields(){
+  const now=new Date();
+  document.getElementById('f_date').value = now.toLocaleDateString('ta-IN');
+  document.getElementById('f_time').value = now.toLocaleTimeString('ta-IN');
+}
+function initNewForm(){
+  editingId=null;
+  setNowFields();
+  document.getElementById('f_dhsid').value = peekDhsId();
+  document.getElementById('f_status').value='பெண்டிங்';
+  document.getElementById('f_custname').value='';
+  document.getElementById('f_mobile').value='';
+  refreshFormSelects();
+  document.getElementById('f_worktype').value='';
+  document.getElementById('f_svccat').value='';
+  document.getElementById('f_svcname').value='';
+  document.getElementById('f_staff').value='';
+  document.getElementById('f_refno').value='';
+  document.getElementById('f_fee').value=0;
+  document.getElementById('f_advance').value=0;
+  document.getElementById('f_staff_fee').value=0;
+  document.getElementById('f_staff_advance').value=0;
+  document.getElementById('f_notes').value='';
+  document.getElementById('f_photo').value='';
+  document.getElementById('f_signature').value='';
+  document.getElementById('f_workdoc').value='';
+  document.getElementById('f_donedoc').value='';
+  currentPhoto=null; currentSignature=null; currentWorkDocs=[]; currentDoneDocs=[];
+  document.getElementById('photoPreviewWrap').innerHTML='';
+  document.getElementById('workDocList').innerHTML='';
+  document.getElementById('doneDocList').innerHTML='';
+  clearSignaturePad();
+  updateBalances();
+  toggleOutsideWorkBox();
+  document.getElementById('whatsappBtn').disabled=true;
+  document.getElementById('printReceiptBtn').disabled=true;
+  document.getElementById('saveHint').textContent='பதிவு செய்த பின் WhatsApp / இரசீது பொத்தான்கள் இயங்கும்.';
+}
+
+function updateBalances(){
+  const fee=parseFloat(document.getElementById('f_fee').value)||0;
+  const adv=parseFloat(document.getElementById('f_advance').value)||0;
+  const bal=fee-adv;
+  const el=document.getElementById('f_balance_display');
+  el.textContent='₹'+bal;
+  el.className = bal>0 ? 'neg' : (bal<0 ? 'pos' : '');
+
+  const sfee=parseFloat(document.getElementById('f_staff_fee').value)||0;
+  const sadv=parseFloat(document.getElementById('f_staff_advance').value)||0;
+  const sbal=sfee-sadv;
+  const sel=document.getElementById('f_staff_balance_display');
+  sel.textContent='₹'+sbal;
+  sel.className = sbal>0 ? 'neg' : (sbal<0 ? 'pos' : '');
+}
+function toggleOutsideWorkBox(){
+  const wt=document.getElementById('f_worktype').value;
+  document.getElementById('outsideWorkBox').style.display = (wt==='வெளி வேலை') ? 'block' : 'none';
+}
+['f_fee','f_advance','f_staff_fee','f_staff_advance'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',updateBalances);
+});
+document.getElementById('f_worktype').addEventListener('change',toggleOutsideWorkBox);
+
+/* ===================== FILE -> DATAURL HELPERS ===================== */
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+document.getElementById('f_photo').addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const dataUrl=await fileToDataUrl(file);
+  currentPhoto={name:file.name, dataUrl, driveLink:null};
+  document.getElementById('photoPreviewWrap').innerHTML=`<img src="${dataUrl}" class="thumb" style="margin-top:6px;">`;
+});
+document.getElementById('f_signature').addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const dataUrl=await fileToDataUrl(file);
+  currentSignature={dataUrl, driveLink:null};
+  drawSignatureFromDataUrl(dataUrl);
+});
+document.getElementById('f_workdoc').addEventListener('change', async (e)=>{
+  for(const file of e.target.files){
+    const dataUrl=await fileToDataUrl(file);
+    currentWorkDocs.push({name:file.name, dataUrl, driveLink:null});
+  }
+  renderDocChips('workDocList', currentWorkDocs);
+});
+document.getElementById('f_donedoc').addEventListener('change', async (e)=>{
+  for(const file of e.target.files){
+    const dataUrl=await fileToDataUrl(file);
+    currentDoneDocs.push({name:file.name, dataUrl, driveLink:null});
+  }
+  renderDocChips('doneDocList', currentDoneDocs);
+});
+function renderDocChips(wrapId, arr){
+  const wrap=document.getElementById(wrapId);
+  wrap.innerHTML='';
+  arr.forEach((d,i)=>{
+    const chip=document.createElement('div'); chip.className='doc-chip';
+    chip.innerHTML=`<a href="${d.dataUrl}" target="_blank">${escapeHtml(d.name)}</a> <span style="cursor:pointer;color:#c0392b;" onclick="removeDoc('${wrapId}',${i})">✕</span>`;
+    wrap.appendChild(chip);
+  });
+}
+function removeDoc(wrapId, i){
+  if(wrapId==='workDocList') currentWorkDocs.splice(i,1); else currentDoneDocs.splice(i,1);
+  renderDocChips(wrapId, wrapId==='workDocList'?currentWorkDocs:currentDoneDocs);
+}
+
+/* ===================== SIGNATURE PAD ===================== */
+const sigCanvas=document.getElementById('sigpad');
+const sigCtx=sigCanvas.getContext('2d');
+let sigDrawing=false, sigHasContent=false;
+function resizeSigCanvas(){
+  const ratio=window.devicePixelRatio||1;
+  const rect=sigCanvas.getBoundingClientRect();
+  sigCanvas.width=rect.width*ratio; sigCanvas.height=rect.height*ratio;
+  sigCtx.scale(ratio,ratio);
+  sigCtx.lineWidth=2; sigCtx.lineCap='round'; sigCtx.strokeStyle='#1f2d3a';
+}
+window.addEventListener('resize', resizeSigCanvas);
+function getPos(evt){
+  const rect=sigCanvas.getBoundingClientRect();
+  const t=evt.touches? evt.touches[0]:evt;
+  return {x:t.clientX-rect.left, y:t.clientY-rect.top};
+}
+function sigStart(e){ sigDrawing=true; const p=getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); e.preventDefault(); }
+function sigMove(e){ if(!sigDrawing) return; const p=getPos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke(); sigHasContent=true; e.preventDefault(); }
+function sigEnd(){ sigDrawing=false; if(sigHasContent){ currentSignature={dataUrl:sigCanvas.toDataURL('image/png'), driveLink:null}; } }
+sigCanvas.addEventListener('mousedown',sigStart);
+sigCanvas.addEventListener('mousemove',sigMove);
+window.addEventListener('mouseup',sigEnd);
+sigCanvas.addEventListener('touchstart',sigStart,{passive:false});
+sigCanvas.addEventListener('touchmove',sigMove,{passive:false});
+sigCanvas.addEventListener('touchend',sigEnd);
+document.getElementById('sigClear').addEventListener('click',clearSignaturePad);
+function clearSignaturePad(){
+  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+  sigHasContent=false; currentSignature=null;
+  const sigFileInput=document.getElementById('f_signature');
+  if(sigFileInput) sigFileInput.value='';
+}
+function drawSignatureFromDataUrl(dataUrl){
+  const ratio=window.devicePixelRatio||1;
+  const img=new Image();
+  img.onload=()=>{
+    sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+    sigCtx.drawImage(img,0,0,sigCanvas.width/ratio,sigCanvas.height/ratio);
+    sigHasContent=true;
+  };
+  img.src=dataUrl;
+}
+
+/* ===================== SAVE RECORD ===================== */
+document.getElementById('saveBtn').addEventListener('click', saveRecord);
+async function saveRecord(){
+  const custname=document.getElementById('f_custname').value.trim();
+  const mobile=document.getElementById('f_mobile').value.trim();
+  const worktype=document.getElementById('f_worktype').value;
+  if(!custname){toast('வாடிக்கையாளர் பெயர் தேவை');return;}
+  if(!mobile || mobile.length<10){toast('சரியான மொபைல் எண் தேவை');return;}
+  if(!worktype){toast('வேலை வகை தேர்வு செய்யவும்');return;}
+
+  const isNew = editingId===null;
+  const id = isNew ? nextDhsId() : editingId;
+  if(isNew) document.getElementById('f_dhsid').value=id;
+
+  const record={
+    id,
+    date: document.getElementById('f_date').value,
+    time: document.getElementById('f_time').value,
+    custname, mobile,
+    worktype,
+    svccat: document.getElementById('f_svccat').value,
+    svcname: document.getElementById('f_svcname').value,
+    staff: document.getElementById('f_staff').value,
+    refno: document.getElementById('f_refno').value.trim(),
+    fee: parseFloat(document.getElementById('f_fee').value)||0,
+    advance: parseFloat(document.getElementById('f_advance').value)||0,
+    staffFee: parseFloat(document.getElementById('f_staff_fee').value)||0,
+    staffAdvance: parseFloat(document.getElementById('f_staff_advance').value)||0,
+    status: document.getElementById('f_status').value,
+    notes: document.getElementById('f_notes').value.trim(),
+    photo: currentPhoto,
+    signature: currentSignature,
+    workDocs: currentWorkDocs,
+    doneDocs: currentDoneDocs,
+    updatedAt: new Date().toISOString(),
+    createdAt: isNew ? new Date().toISOString() : (window.__editingCreatedAt || new Date().toISOString())
+  };
+  record.balance = record.fee - record.advance;
+  record.staffBalance = record.staffFee - record.staffAdvance;
+
+  await dbPut(record);
+  toast(isNew? 'பணி பதிவு செய்யப்பட்டது ✅' : 'பணி புதுப்பிக்கப்பட்டது ✅');
+
+  editingId=id;
+  document.getElementById('whatsappBtn').disabled=false;
+  document.getElementById('printReceiptBtn').disabled=false;
+  document.getElementById('saveHint').textContent='பணி எண் '+id+' பதிவு செய்யப்பட்டது.';
+
+  // Upload files to Drive in background if configured
+  if(SCRIPT_URL){ uploadRecordFiles(record); }
+
+  await renderRecordsTable();
+}
+
+/* ===================== DRIVE UPLOAD (Apps Script) ===================== */
+async function uploadRecordFiles(record){
+  document.getElementById('syncStatusText').textContent='📤 கோப்புகள் பதிவேற்றப்படுகிறது...';
+  try{
+    const filesToUpload=[];
+    if(record.photo && !record.photo.driveLink) filesToUpload.push({field:'photo', idx:null, name:record.photo.name||'photo.jpg', dataUrl:record.photo.dataUrl});
+    if(record.signature && !record.signature.driveLink) filesToUpload.push({field:'signature', idx:null, name:'signature.png', dataUrl:record.signature.dataUrl});
+    (record.workDocs||[]).forEach((d,i)=>{ if(!d.driveLink) filesToUpload.push({field:'workDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
+    (record.doneDocs||[]).forEach((d,i)=>{ if(!d.driveLink) filesToUpload.push({field:'doneDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
+
+    for(const f of filesToUpload){
+      const res=await fetch(SCRIPT_URL,{
+        method:'POST',
+        body: JSON.stringify({action:'uploadFile', dhsId:record.id, fileName:f.name, base64:f.dataUrl})
+      });
+      const data=await res.json();
+      if(data.url){
+        if(f.field==='photo') record.photo.driveLink=data.url;
+        else if(f.field==='signature') record.signature.driveLink=data.url;
+        else if(f.field==='workDocs') record.workDocs[f.idx].driveLink=data.url;
+        else if(f.field==='doneDocs') record.doneDocs[f.idx].driveLink=data.url;
+      }
+    }
+    await dbPut(record);
+    // push record metadata to sheet too
+    await fetch(SCRIPT_URL,{method:'POST', body: JSON.stringify({action:'syncPush', record})});
+    document.getElementById('syncStatusText').textContent='✅ கோப்புகள் Drive-இல் சேமிக்கப்பட்டன — '+new Date().toLocaleTimeString('ta-IN');
+    toast('கோப்புகள் Drive-க்கு பதிவேற்றப்பட்டன');
+    await renderRecordsTable();
+  }catch(err){
+    document.getElementById('syncStatusText').textContent='⚠️ பதிவேற்றத்தில் பிழை — மீண்டும் முயற்சிக்கவும்';
+    console.error(err);
+  }
+}
+
+document.getElementById('resetBtn').addEventListener('click', initNewForm);
+
+/* ===================== WHATSAPP SEND ===================== */
+document.getElementById('whatsappBtn').addEventListener('click', async ()=>{
+  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
+  const all=await dbGetAll();
+  const record=all.find(r=>r.id===editingId);
+  if(!record){toast('பணி கிடைக்கவில்லை');return;}
+
+  let link='';
+  if(record.doneDocs && record.doneDocs.length && record.doneDocs[0].driveLink){
+    link=record.doneDocs[0].driveLink;
+  } else if(record.workDocs && record.workDocs.length && record.workDocs[0].driveLink){
+    link=record.workDocs[0].driveLink;
+  }
+
+  let msg = `வணக்கம் ${record.custname},\n`+
+    `தாஸ் பொது சேவை மையம்\n`+
+    `பணி எண்: ${record.id}\n`+
+    `சேவை: ${record.svcname||record.svccat||'-'}\n`+
+    `நிலை: ${record.status}\n`+
+    `கட்டணம்: ₹${record.fee} | அட்வான்ஸ்: ₹${record.advance} | பேலன்ஸ்: ₹${record.balance}\n`;
+  if(link){
+    msg += `\nஆவணத்தை இங்கே பார்க்கவும்:\n${link}\n`;
+  } else if(SCRIPT_URL){
+    msg += `\n(ஆவணம் இன்னும் பதிவேற்றப்படவில்லை)\n`;
+  }
+  msg += `\nநன்றி!`;
+
+  const waNumber = record.mobile.length===10 ? '91'+record.mobile : record.mobile;
+  const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+});
+
+/* ===================== RECEIPT PRINT ===================== */
+document.getElementById('printReceiptBtn').addEventListener('click', async ()=>{
+  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
+  const all=await dbGetAll();
+  const record=all.find(r=>r.id===editingId);
+  if(!record) return;
+  buildAndPrintReceipt(record);
+});
+function buildAndPrintReceipt(record){
+  const area=document.getElementById('receiptArea');
+  area.innerHTML = `
+    <div style="max-width:380px;margin:20px auto;font-family:sans-serif;border:1px solid #333;padding:16px;">
+      <h2 style="text-align:center;margin:0 0 4px;">தாஸ் பொது சேவை மையம்</h2>
+      <p style="text-align:center;margin:0 0 10px;font-size:12px;">Thoothukudi | இரசீது</p>
+      <hr>
+      <p><b>பணி எண்:</b> ${record.id}</p>
+      <p><b>நாள்/நேரம்:</b> ${record.date} ${record.time}</p>
+      <p><b>வாடிக்கையாளர்:</b> ${record.custname}</p>
+      <p><b>மொபைல்:</b> ${record.mobile}</p>
+      <p><b>சேவை:</b> ${record.svcname||record.svccat||'-'}</p>
+      <p><b>வேலை வகை:</b> ${record.worktype}</p>
+      <p><b>குறிப்பு எண்:</b> ${record.refno||'-'}</p>
+      <hr>
+      <p><b>சேவை கட்டணம்:</b> ₹${record.fee}</p>
+      <p><b>அட்வான்ஸ்:</b> ₹${record.advance}</p>
+      <p><b>பேலன்ஸ்:</b> ₹${record.balance}</p>
+      <hr>
+      <p><b>நிலை:</b> ${record.status}</p>
+      <p style="text-align:center;margin-top:14px;font-size:12px;">நன்றி! மீண்டும் வருக.</p>
+    </div>`;
+  area.style.display='block';
+  window.print();
+  area.style.display='none';
+}
+
+/* ===================== TABS ===================== */
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['new','list','admin'].forEach(t=>{
+      document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab)?'block':'none';
+    });
+    if(btn.dataset.tab==='list') renderRecordsTable();
+  });
+});
+
+/* ===================== RECORDS TABLE ===================== */
+function statusPillClass(status){
+  if(status==='முடிந்தது') return 'done';
+  if(status==='நடைபெறுகிறது') return 'progress';
+  if(status==='ரத்து செய்யப்பட்டது') return 'cancel';
+  return 'pending';
+}
+async function renderRecordsTable(){
+  const all=await dbGetAll();
+  all.sort((a,b)=> (b.id>a.id?1:-1));
+  const search=(document.getElementById('searchBox').value||'').toLowerCase();
+  const filterStatus=document.getElementById('filterStatus').value;
+  const filterWorktype=document.getElementById('filterWorktype').value;
+
+  const filtered=all.filter(r=>{
+    if(filterStatus && r.status!==filterStatus) return false;
+    if(filterWorktype && r.worktype!==filterWorktype) return false;
+    if(search){
+      const hay=(r.id+' '+r.custname+' '+r.mobile).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const tbody=document.getElementById('recordsTbody');
+  tbody.innerHTML='';
+  filtered.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${r.id}</td>
+      <td>${r.date}</td>
+      <td>${escapeHtml(r.custname)}</td>
+      <td>${r.mobile}</td>
+      <td>${r.worktype||'-'}</td>
+      <td>${escapeHtml(r.svcname||r.svccat||'-')}</td>
+      <td>${escapeHtml(r.staff||'-')}</td>
+      <td>₹${r.fee}</td>
+      <td>₹${r.balance}</td>
+      <td><span class="pill ${statusPillClass(r.status)}">${r.status}</span></td>
+      <td class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')">👁️</button>
+        <button class="btn btn-warn btn-sm" onclick="editRecord('${r.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑️</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById('searchBox').addEventListener('input', renderRecordsTable);
+document.getElementById('filterStatus').addEventListener('change', renderRecordsTable);
+document.getElementById('filterWorktype').addEventListener('change', renderRecordsTable);
+
+async function getRecordById(id){
+  const all=await dbGetAll();
+  return all.find(r=>r.id===id);
+}
+async function viewRecord(id){
+  const r=await getRecordById(id);
+  if(!r) return;
+  const body=document.getElementById('detailModalBody');
+  body.innerHTML=`
+    <p><b>பணி எண்:</b> ${r.id} | <span class="pill ${statusPillClass(r.status)}">${r.status}</span></p>
+    <p><b>நாள்/நேரம்:</b> ${r.date} ${r.time}</p>
+    <p><b>வாடிக்கையாளர்:</b> ${escapeHtml(r.custname)} | <b>மொபைல்:</b> ${r.mobile}</p>
+    <p><b>வேலை வகை:</b> ${r.worktype} | <b>சேவை வகை:</b> ${r.svccat||'-'} | <b>சேவை பெயர்:</b> ${r.svcname||'-'}</p>
+    <p><b>பணியாளர்:</b> ${r.staff||'-'} | <b>குறிப்பு எண்:</b> ${r.refno||'-'}</p>
+    <p><b>கட்டணம்:</b> ₹${r.fee} | <b>அட்வான்ஸ்:</b> ₹${r.advance} | <b>பேலன்ஸ்:</b> ₹${r.balance}</p>
+    ${r.worktype==='வெளி வேலை' ? `<p><b>பணியாளர் கட்டணம்:</b> ₹${r.staffFee} | <b>அட்வான்ஸ்:</b> ₹${r.staffAdvance} | <b>பேலன்ஸ்:</b> ₹${r.staffBalance}</p>`:''}
+    <p><b>குறிப்புகள்:</b> ${escapeHtml(r.notes||'-')}</p>
+    ${r.photo?`<p><b>புகைப்படம்:</b><br><img src="${r.photo.driveLink||r.photo.dataUrl}" class="thumb" style="width:100px;height:100px;"></p>`:''}
+    ${r.signature?`<p><b>கையெழுத்து:</b><br><img src="${r.signature.driveLink||r.signature.dataUrl}" style="max-width:180px;border:1px solid #ddd;"></p>`:''}
+    ${(r.workDocs&&r.workDocs.length)?`<p><b>வேலை ஆவணங்கள்:</b><br>${r.workDocs.map(d=>`<a href="${d.driveLink||d.dataUrl}" target="_blank">${escapeHtml(d.name)}</a>`).join('<br>')}</p>`:''}
+    ${(r.doneDocs&&r.doneDocs.length)?`<p><b>முடிந்த ஆவணங்கள்:</b><br>${r.doneDocs.map(d=>`<a href="${d.driveLink||d.dataUrl}" target="_blank">${escapeHtml(d.name)}</a>`).join('<br>')}</p>`:''}
+    <div class="row-inline" style="margin-top:10px;">
+      <button class="btn btn-primary btn-sm" onclick="closeModal();editRecord('${r.id}')">✏️ திருத்த</button>
+      <button class="btn btn-warn btn-sm" onclick="buildAndPrintReceipt(${JSON.stringify(r).replace(/"/g,'&quot;')})">🖨️ இரசீது</button>
+    </div>`;
+  document.getElementById('detailModalBg').classList.add('show');
+}
+function closeModal(){ document.getElementById('detailModalBg').classList.remove('show'); }
+
+async function editRecord(id){
+  const r=await getRecordById(id);
+  if(!r) return;
+  document.querySelector('nav button[data-tab="new"]').click();
+  editingId=r.id;
+  window.__editingCreatedAt = r.createdAt;
+  document.getElementById('f_date').value=r.date;
+  document.getElementById('f_time').value=r.time;
+  document.getElementById('f_dhsid').value=r.id;
+  document.getElementById('f_status').value=r.status;
+  document.getElementById('f_custname').value=r.custname;
+  document.getElementById('f_mobile').value=r.mobile;
+  refreshFormSelects();
+  document.getElementById('f_worktype').value=r.worktype||'';
+  document.getElementById('f_svccat').value=r.svccat||'';
+  refreshServiceNameSelect();
+  document.getElementById('f_svcname').value=r.svcname||'';
+  document.getElementById('f_staff').value=r.staff||'';
+  document.getElementById('f_refno').value=r.refno||'';
+  document.getElementById('f_fee').value=r.fee||0;
+  document.getElementById('f_advance').value=r.advance||0;
+  document.getElementById('f_staff_fee').value=r.staffFee||0;
+  document.getElementById('f_staff_advance').value=r.staffAdvance||0;
+  document.getElementById('f_notes').value=r.notes||'';
+  currentPhoto=r.photo||null;
+  currentWorkDocs=r.workDocs||[];
+  currentDoneDocs=r.doneDocs||[];
+  document.getElementById('photoPreviewWrap').innerHTML = currentPhoto? `<img src="${currentPhoto.dataUrl}" class="thumb" style="margin-top:6px;">`:'';
+  renderDocChips('workDocList', currentWorkDocs);
+  renderDocChips('doneDocList', currentDoneDocs);
+  clearSignaturePad();
+  currentSignature=r.signature||null;
+  if(currentSignature && currentSignature.dataUrl){
+    drawSignatureFromDataUrl(currentSignature.dataUrl);
+  }
+  toggleOutsideWorkBox();
+  updateBalances();
+  document.getElementById('whatsappBtn').disabled=false;
+  document.getElementById('printReceiptBtn').disabled=false;
+  document.getElementById('saveHint').textContent='பணி எண் '+r.id+' திருத்தப்படுகிறது.';
+}
+async function deleteRecord(id){
+  if(!confirm(id+' பணியை நீக்க வேண்டுமா?')) return;
+  await dbDelete(id);
+  toast('நீக்கப்பட்டது');
+  renderRecordsTable();
+}
+
+/* ===================== EXPORT ===================== */
+document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('exportAllBtn').addEventListener('click', exportData);
+async function exportData(){
+  const all=await dbGetAll();
+  const payload={records:all, masters:MASTERS, exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='dhass-work-orders-'+Date.now()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ===================== ADMIN LOGIN ===================== */
+document.getElementById('adminLoginBtn').addEventListener('click', ()=>{
+  const val=document.getElementById('adminPass').value;
+  if(val===ADMIN_PASSWORD){
+    document.getElementById('adminGate').style.display='none';
+    document.getElementById('adminPanel').style.display='block';
+    renderAllMasterLists();
+    document.getElementById('scriptUrlInput').value=SCRIPT_URL;
+  } else {
+    toast('தவறான கடவுச்சொல்');
+  }
+});
+document.getElementById('logoutAdminBtn').addEventListener('click', ()=>{
+  document.getElementById('adminGate').style.display='block';
+  document.getElementById('adminPanel').style.display='none';
+  document.getElementById('adminPass').value='';
+});
+document.getElementById('saveScriptUrlBtn').addEventListener('click', ()=>{
+  SCRIPT_URL=document.getElementById('scriptUrlInput').value.trim();
+  localStorage.setItem('dhass_wo_script_url', SCRIPT_URL);
+  toast('Script URL சேமிக்கப்பட்டது');
+});
+document.getElementById('syncNowBtn').addEventListener('click', async ()=>{
+  if(!SCRIPT_URL){toast('முதலில் Apps Script URL சேமிக்கவும்');return;}
+  document.getElementById('syncStatusText').textContent='🔄 Sync செய்யப்படுகிறது...';
+  try{
+    const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'syncPull'})});
+    const data=await res.json();
+    if(data.records && Array.isArray(data.records)){
+      for(const rec of data.records){ await dbPut(rec); }
+      document.getElementById('syncStatusText').textContent='✅ Sync முடிந்தது — '+new Date().toLocaleTimeString('ta-IN');
+      renderRecordsTable();
+      toast('Sync வெற்றி');
+    }
+  }catch(err){
+    document.getElementById('syncStatusText').textContent='⚠️ Sync பிழை';
+    console.error(err);
+  }
+});
+
+/* ===================== INIT ===================== */
+(async function init(){
+  await openDB();
+  resizeSigCanvas();
+  refreshFormSelects();
+  initNewForm();
+  await renderRecordsTable();
+})();
+</script>
+</body>
+</html>
