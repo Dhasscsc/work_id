@@ -972,9 +972,8 @@ function generateReceiptCanvasDataUrl(record){
 }
 
 /* ===================== WHATSAPP SEND — வாடிக்கையாளருக்கு ===================== */
-document.getElementById('whatsappBtn').addEventListener('click', async ()=>{
-  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
-  let record = await getRecordById(editingId);
+async function sendCustomerWhatsApp(id){
+  let record = await getRecordById(id);
   if(!record){toast('பணி கிடைக்கவில்லை');return;}
 
   let doneLink='';
@@ -1005,15 +1004,12 @@ document.getElementById('whatsappBtn').addEventListener('click', async ()=>{
   msg += `\nநன்றி!`;
 
   const waNumber = record.mobile.length===10 ? '91'+record.mobile : record.mobile;
-  const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-  window.open(url,'_blank');
+  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`,'_blank');
   await renderRecordsTable();
-});
+}
 
-/* ===================== WHATSAPP SEND — பணியாளருக்கு ===================== */
-document.getElementById('staffWhatsappBtn').addEventListener('click', async ()=>{
-  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
-  const record = await getRecordById(editingId);
+async function sendStaffWhatsApp(id){
+  const record = await getRecordById(id);
   if(!record){toast('பணி கிடைக்கவில்லை');return;}
   if(!record.staff){toast('பணியாளர் தேர்வு செய்யப்படவில்லை');return;}
   const staffMobile = getStaffMobile(record.staff).replace(/\D/g,'');
@@ -1032,8 +1028,18 @@ document.getElementById('staffWhatsappBtn').addEventListener('click', async ()=>
   msg += `\nநன்றி!`;
 
   const waNumber = staffMobile.length===10 ? '91'+staffMobile : staffMobile;
-  const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
-  window.open(url,'_blank');
+  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+document.getElementById('whatsappBtn').addEventListener('click', ()=>{
+  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
+  sendCustomerWhatsApp(editingId);
+});
+
+/* ===================== WHATSAPP SEND — பணியாளருக்கு ===================== */
+document.getElementById('staffWhatsappBtn').addEventListener('click', ()=>{
+  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
+  sendStaffWhatsApp(editingId);
 });
 
 /* ===================== RECEIPT PRINT ===================== */
@@ -1147,9 +1153,11 @@ async function renderRecordsTable(){
       <td>₹${r.balance}</td>
       <td><span class="pill ${statusPillClass(r.status)}">${r.status}</span></td>
       <td class="actions-cell">
-        <button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')">👁️</button>
-        <button class="btn btn-warn btn-sm" onclick="editRecord('${r.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑️</button>
+        <button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')" title="விவரம்">👁️</button>
+        <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="sendCustomerWhatsApp('${r.id}')" title="வாடிக்கையாளருக்கு WhatsApp">📤 வாடிக்கை</button>
+        <button class="btn btn-sm" style="background:#0f7a63;color:#fff;" onclick="sendStaffWhatsApp('${r.id}')" title="பணியாளருக்கு WhatsApp">👷 பணியாளர்</button>
+        <button class="btn btn-warn btn-sm" onclick="editRecord('${r.id}')" title="திருத்த">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')" title="நீக்க">🗑️</button>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -1221,7 +1229,10 @@ async function renderStaffPage(){
       <td>₹${r.staffFee||0}</td>
       <td>₹${r.staffAdvance||0}</td>
       <td>₹${r.staffBalance||0}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')">👁️</button></td>`;
+      <td class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')" title="விவரம்">👁️</button>
+        <button class="btn btn-sm" style="background:#0f7a63;color:#fff;" onclick="sendStaffWhatsApp('${r.id}')" title="பணியாளருக்கு WhatsApp">👷 அனுப்பு</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1247,8 +1258,10 @@ async function viewRecord(id){
     ${r.signature?`<p><b>கையெழுத்து:</b><br><img src="${r.signature.driveLink||r.signature.dataUrl}" style="max-width:180px;border:1px solid #ddd;"></p>`:''}
     ${(r.workDocs&&r.workDocs.length)?`<p><b>வேலை ஆவணங்கள்:</b><br>${r.workDocs.map(d=>`<a href="${d.driveLink||d.dataUrl}" target="_blank">${escapeHtml(d.name)}</a>`).join('<br>')}</p>`:''}
     ${(r.doneDocs&&r.doneDocs.length)?`<p><b>முடிந்த ஆவணங்கள்:</b><br>${r.doneDocs.map(d=>`<a href="${d.driveLink||d.dataUrl}" target="_blank">${escapeHtml(d.name)}</a>`).join('<br>')}</p>`:''}
-    <div class="row-inline" style="margin-top:10px;">
+    <div class="row-inline" style="margin-top:10px;flex-wrap:wrap;gap:6px;">
       <button class="btn btn-primary btn-sm" onclick="closeModal();editRecord('${r.id}')">✏️ திருத்த</button>
+      <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="sendCustomerWhatsApp('${r.id}')">📤 வாடிக்கையாளர்</button>
+      <button class="btn btn-sm" style="background:#0f7a63;color:#fff;" onclick="sendStaffWhatsApp('${r.id}')">👷 பணியாளர்</button>
       <button class="btn btn-warn btn-sm" onclick="buildAndPrintReceipt(${JSON.stringify(r).replace(/"/g,'&quot;')})">🖨️ இரசீது</button>
     </div>`;
   document.getElementById('detailModalBg').classList.add('show');
