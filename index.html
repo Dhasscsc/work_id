@@ -361,11 +361,13 @@
         <label>Apps Script Web App URL</label>
         <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec">
       </div>
-      <div class="row-inline">
+      <div class="row-inline" style="flex-wrap:wrap;gap:8px;">
         <button class="btn btn-primary btn-sm" id="saveScriptUrlBtn">💾 சேமி</button>
         <button class="btn btn-accent btn-sm" id="syncNowBtn">🔄 இப்போதே Sync</button>
-        <span class="sync-status" id="syncStatusText">—</span>
+        <button class="btn btn-warn btn-sm" id="forcePushBtn">⬆️ இந்த கணினியின் பணிகள் அனைத்தையும் Sheet-க்கு அனுப்பு</button>
       </div>
+      <p class="sync-status" id="syncStatusText" style="margin-top:8px;">—</p>
+      <p class="hint">முதல் முறை: வீட்டு கணினியிலும், மையத்து கணினியிலும் ஒவ்வொன்றிலும் ஒரு முறை "⬆️ இந்த கணினியின் பணிகள் அனைத்தையும் Sheet-க்கு அனுப்பு" அழுத்தவும். அதன்பின் ஒவ்வொரு பதிவும் தானாகவே Sheet-இல் சேமிக்கப்பட்டு, எல்லா கணினியிலும் தெரியும்.</p>
     </div>
 
     <div class="card">
@@ -533,7 +535,7 @@ function addMaster(key,inputId){
   MASTERS[key].push(val);
   saveMasterList(key,MASTERS[key]);
   input.value='';
-  renderMasterList(key); refreshFormSelects();
+  renderMasterList(key); refreshFormSelects(); pushMastersToCloud();
   toast('சேர்க்கப்பட்டது');
 }
 function editMaster(key,idx){
@@ -551,7 +553,7 @@ function editMaster(key,idx){
     saveServiceNamesByCat();
     renderSvcCatOptionsInAdmin();
   }
-  renderMasterList(key); refreshFormSelects();
+  renderMasterList(key); refreshFormSelects(); pushMastersToCloud();
   toast('திருத்தப்பட்டது');
 }
 function deleteMaster(key,idx){
@@ -564,7 +566,7 @@ function deleteMaster(key,idx){
     saveServiceNamesByCat();
     renderSvcCatOptionsInAdmin();
   }
-  renderMasterList(key); refreshFormSelects();
+  renderMasterList(key); refreshFormSelects(); pushMastersToCloud();
   toast('நீக்கப்பட்டது');
 }
 
@@ -606,7 +608,7 @@ function addSvcName(){
   MASTERS.serviceNamesByCat[cat].push(val);
   saveServiceNamesByCat();
   input.value='';
-  renderSvcNameListInAdmin(); refreshFormSelects();
+  renderSvcNameListInAdmin(); refreshFormSelects(); pushMastersToCloud();
   toast('சேர்க்கப்பட்டது');
 }
 function editSvcName(idx){
@@ -618,7 +620,7 @@ function editSvcName(idx){
   if(!trimmed) return;
   MASTERS.serviceNamesByCat[cat][idx]=trimmed;
   saveServiceNamesByCat();
-  renderSvcNameListInAdmin(); refreshFormSelects();
+  renderSvcNameListInAdmin(); refreshFormSelects(); pushMastersToCloud();
   toast('திருத்தப்பட்டது');
 }
 function deleteSvcName(idx){
@@ -626,7 +628,7 @@ function deleteSvcName(idx){
   const cat=document.getElementById('admin_svcname_cat').value;
   MASTERS.serviceNamesByCat[cat].splice(idx,1);
   saveServiceNamesByCat();
-  renderSvcNameListInAdmin(); refreshFormSelects();
+  renderSvcNameListInAdmin(); refreshFormSelects(); pushMastersToCloud();
   toast('நீக்கப்பட்டது');
 }
 
@@ -654,7 +656,7 @@ function addStaff(){
   MASTERS.staffNames.push({name, mobile});
   saveMasterList('staffNames', MASTERS.staffNames);
   nameInput.value=''; mobileInput.value='';
-  renderStaffList(); refreshFormSelects();
+  renderStaffList(); refreshFormSelects(); pushMastersToCloud();
   toast('சேர்க்கப்பட்டது');
 }
 function editStaff(idx){
@@ -667,14 +669,14 @@ function editStaff(idx){
   if(mobile===null) return;
   MASTERS.staffNames[idx]={name:trimmedName, mobile:mobile.trim()};
   saveMasterList('staffNames', MASTERS.staffNames);
-  renderStaffList(); refreshFormSelects();
+  renderStaffList(); refreshFormSelects(); pushMastersToCloud();
   toast('திருத்தப்பட்டது');
 }
 function deleteStaff(idx){
   if(!confirm('நீக்க வேண்டுமா?')) return;
   MASTERS.staffNames.splice(idx,1);
   saveMasterList('staffNames', MASTERS.staffNames);
-  renderStaffList(); refreshFormSelects();
+  renderStaffList(); refreshFormSelects(); pushMastersToCloud();
   toast('நீக்கப்பட்டது');
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -886,28 +888,194 @@ async function saveRecord(){
   document.getElementById('printReceiptBtn').disabled=false;
   document.getElementById('saveHint').textContent='பணி எண் '+id+' பதிவு செய்யப்பட்டது.';
 
-  // Upload files to Drive in background if configured
-  if(SCRIPT_URL){ uploadRecordFiles(record); }
+  // Upload files to Drive + push record to Sheet in background if configured
+  if(SCRIPT_URL){
+    await pushRecordToCloud(record);   // உடனடியாக Sheet-இல் சேமிக்கவும்
+    uploadRecordFiles(record);          // கோப்புகள் பின்னணியில் பதிவேற்றப்படும்
+  } else {
+    markPendingPush(record.id);
+  }
 
   await renderRecordsTable();
 }
 
-/* ===================== DRIVE UPLOAD (Apps Script) ===================== */
-async function uploadRecordFiles(record){
-  document.getElementById('syncStatusText').textContent='📤 கோப்புகள் பதிவேற்றப்படுகிறது...';
-  try{
-    const filesToUpload=[];
-    if(record.photo && !record.photo.driveLink) filesToUpload.push({field:'photo', idx:null, name:record.photo.name||'photo.jpg', dataUrl:record.photo.dataUrl});
-    if(record.signature && !record.signature.driveLink) filesToUpload.push({field:'signature', idx:null, name:'signature.png', dataUrl:record.signature.dataUrl});
-    (record.workDocs||[]).forEach((d,i)=>{ if(!d.driveLink) filesToUpload.push({field:'workDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
-    (record.doneDocs||[]).forEach((d,i)=>{ if(!d.driveLink) filesToUpload.push({field:'doneDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
+/* ===================== CLOUD SYNC LAYER ===================== */
+function setSyncStatus(txt){
+  const el=document.getElementById('syncStatusText');
+  if(el) el.textContent=txt;
+}
+async function cloudCall(payload){
+  if(!SCRIPT_URL) throw new Error('no script url');
+  const res=await fetch(SCRIPT_URL,{method:'POST', body: JSON.stringify(payload)});
+  const data=await res.json();
+  if(data.error) throw new Error(data.error);
+  return data;
+}
 
+// Sheet-க்கு அனுப்பும்போது base64 dataUrl-ஐ நீக்கவும் (cell வரம்பு)
+function slimRecord(r){
+  const clone=JSON.parse(JSON.stringify(r));
+  if(clone.photo) clone.photo={name:clone.photo.name||'photo', driveLink:clone.photo.driveLink||''};
+  if(clone.signature) clone.signature={driveLink:clone.signature.driveLink||''};
+  clone.workDocs=(clone.workDocs||[]).map(d=>({name:d.name||'', driveLink:d.driveLink||''}));
+  clone.doneDocs=(clone.doneDocs||[]).map(d=>({name:d.name||'', driveLink:d.driveLink||''}));
+  return clone;
+}
+
+async function pushRecordToCloud(record){
+  if(!SCRIPT_URL) return false;
+  try{
+    await cloudCall({action:'syncPush', record: slimRecord(record)});
+    setSyncStatus('✅ Sheet-இல் சேமிக்கப்பட்டது — '+new Date().toLocaleTimeString('ta-IN'));
+    return true;
+  }catch(err){
+    console.error(err);
+    setSyncStatus('⚠️ Sheet-இல் சேமிக்க முடியவில்லை — "🔄 இப்போதே Sync" அழுத்தவும்');
+    markPendingPush(record.id);
+    return false;
+  }
+}
+
+/* பதிவேற்ற முடியாத பணிகளை நினைவில் வைத்து, பின்பு மீண்டும் அனுப்பவும் */
+function getPendingPushIds(){ return JSON.parse(localStorage.getItem('dhass_wo_pending')||'[]'); }
+function markPendingPush(id){
+  const p=getPendingPushIds();
+  if(!p.includes(id)){ p.push(id); localStorage.setItem('dhass_wo_pending', JSON.stringify(p)); }
+}
+function clearPendingPush(){ localStorage.setItem('dhass_wo_pending','[]'); }
+
+async function pushPendingRecords(){
+  if(!SCRIPT_URL) return;
+  const pending=getPendingPushIds();
+  if(!pending.length) return;
+  const all=await dbGetAll();
+  const toPush=all.filter(r=>pending.includes(r.id)).map(slimRecord);
+  if(!toPush.length){ clearPendingPush(); return; }
+  try{
+    await cloudCall({action:'syncPushBulk', records: toPush});
+    clearPendingPush();
+    setSyncStatus('✅ நிலுவையில் இருந்த '+toPush.length+' பணிகள் Sheet-இல் சேமிக்கப்பட்டன');
+  }catch(err){ console.error(err); }
+}
+
+/* இந்த கணினியில் உள்ள, Sheet-இல் இல்லாத பழைய பணிகளை ஒரே முறையில் ஏற்றவும் */
+async function pushAllLocalRecords(){
+  if(!SCRIPT_URL){toast('Script URL இல்லை');return;}
+  setSyncStatus('⬆️ இந்த கணினியின் பணிகள் அனைத்தும் Sheet-க்கு அனுப்பப்படுகிறது...');
+  const all=await dbGetAll();
+  if(!all.length){ setSyncStatus('இந்த கணினியில் பணிகள் இல்லை'); return; }
+  try{
+    // 40 பணிகளாக பிரித்து அனுப்பவும் (timeout தவிர்க்க)
+    for(let i=0;i<all.length;i+=40){
+      const chunk=all.slice(i,i+40).map(slimRecord);
+      await cloudCall({action:'syncPushBulk', records: chunk});
+      setSyncStatus('⬆️ '+Math.min(i+40,all.length)+'/'+all.length+' அனுப்பப்பட்டது...');
+    }
+    clearPendingPush();
+    setSyncStatus('✅ மொத்தம் '+all.length+' பணிகள் Sheet-இல் சேமிக்கப்பட்டன — '+new Date().toLocaleTimeString('ta-IN'));
+    toast('அனைத்து பணிகளும் Sheet-க்கு அனுப்பப்பட்டன');
+  }catch(err){
+    console.error(err);
+    setSyncStatus('⚠️ பிழை: '+err.message);
+    toast('அனுப்புவதில் பிழை');
+  }
+}
+
+/* Sheet-இலிருந்து இழுத்து, உள்ளூர் தரவுடன் merge செய்யவும் */
+async function pullFromCloud(silent){
+  if(!SCRIPT_URL) return;
+  if(!silent) setSyncStatus('🔄 Sheet-இலிருந்து இழுக்கப்படுகிறது...');
+  try{
+    const data=await cloudCall({action:'syncPull'});
+    const cloudRecords=data.records||[];
+    const localAll=await dbGetAll();
+    const localMap={}; localAll.forEach(r=>localMap[r.id]=r);
+
+    let added=0, updated=0;
+    for(const cr of cloudRecords){
+      const local=localMap[cr.id];
+      if(!local){
+        await dbPut(cr); added++;
+      } else {
+        // உள்ளூர் நகலில் base64 dataUrl இருக்கலாம் — அதை இழக்கக்கூடாது
+        const localTime=local.updatedAt||'';
+        const cloudTime=cr.updatedAt||'';
+        if(cloudTime > localTime){
+          const merged=Object.assign({}, local, cr);
+          if(local.photo && local.photo.dataUrl && cr.photo) merged.photo=Object.assign({},cr.photo,{dataUrl:local.photo.dataUrl});
+          if(local.signature && local.signature.dataUrl && cr.signature) merged.signature=Object.assign({},cr.signature,{dataUrl:local.signature.dataUrl});
+          merged.workDocs=mergeDocs(local.workDocs, cr.workDocs);
+          merged.doneDocs=mergeDocs(local.doneDocs, cr.doneDocs);
+          await dbPut(merged); updated++;
+        }
+      }
+    }
+    if(data.nextId){
+      const localCounter=parseInt(localStorage.getItem('dhass_wo_counter')||'0',10);
+      localStorage.setItem('dhass_wo_counter', String(Math.max(localCounter, data.nextId-1)));
+      if(editingId===null) document.getElementById('f_dhsid').value=peekDhsId();
+    }
+    await renderRecordsTable();
+    if(document.getElementById('tab-staff').style.display!=='none') renderStaffPage();
+    setSyncStatus('✅ Sync முடிந்தது — புதியது '+added+', புதுப்பிக்கப்பட்டது '+updated+' ('+new Date().toLocaleTimeString('ta-IN')+')');
+    return true;
+  }catch(err){
+    console.error(err);
+    setSyncStatus('⚠️ Sync பிழை: '+err.message);
+    return false;
+  }
+}
+function mergeDocs(localDocs, cloudDocs){
+  const l=localDocs||[], c=cloudDocs||[];
+  return c.map((cd,i)=>{
+    const ld=l[i];
+    if(ld && ld.dataUrl && (ld.name===cd.name || !cd.name)) return Object.assign({},cd,{dataUrl:ld.dataUrl});
+    return cd;
+  });
+}
+
+/* Master பட்டியல்களை Drive-இல் சேமித்தல் / ஏற்றுதல் */
+async function pushMastersToCloud(){
+  if(!SCRIPT_URL) return;
+  try{
+    await cloudCall({action:'saveMasters', masters:{
+      workTypes: MASTERS.workTypes,
+      serviceCategories: MASTERS.serviceCategories,
+      serviceNamesByCat: MASTERS.serviceNamesByCat,
+      staffNames: MASTERS.staffNames,
+      savedAt: new Date().toISOString()
+    }});
+  }catch(err){ console.error(err); }
+}
+async function pullMastersFromCloud(){
+  if(!SCRIPT_URL) return;
+  try{
+    const data=await cloudCall({action:'loadMasters'});
+    const m=data.masters;
+    if(!m) { await pushMastersToCloud(); return; }
+    if(m.workTypes){ MASTERS.workTypes=m.workTypes; saveMasterList('workTypes',m.workTypes); }
+    if(m.serviceCategories){ MASTERS.serviceCategories=m.serviceCategories; saveMasterList('serviceCategories',m.serviceCategories); }
+    if(m.staffNames){ MASTERS.staffNames=m.staffNames.map(s=> typeof s==='string'?{name:s,mobile:''}:s); saveMasterList('staffNames',MASTERS.staffNames); }
+    if(m.serviceNamesByCat){ MASTERS.serviceNamesByCat=m.serviceNamesByCat; saveServiceNamesByCat(); }
+    refreshFormSelects();
+    if(document.getElementById('adminPanel').style.display!=='none') renderAllMasterLists();
+  }catch(err){ console.error(err); }
+}
+
+/* ===================== DRIVE FILE UPLOAD ===================== */
+async function uploadRecordFiles(record){
+  if(!SCRIPT_URL) return;
+  const filesToUpload=[];
+  if(record.photo && record.photo.dataUrl && !record.photo.driveLink) filesToUpload.push({field:'photo', idx:null, name:record.photo.name||'photo.jpg', dataUrl:record.photo.dataUrl});
+  if(record.signature && record.signature.dataUrl && !record.signature.driveLink) filesToUpload.push({field:'signature', idx:null, name:'signature.png', dataUrl:record.signature.dataUrl});
+  (record.workDocs||[]).forEach((d,i)=>{ if(d.dataUrl && !d.driveLink) filesToUpload.push({field:'workDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
+  (record.doneDocs||[]).forEach((d,i)=>{ if(d.dataUrl && !d.driveLink) filesToUpload.push({field:'doneDocs', idx:i, name:d.name, dataUrl:d.dataUrl}); });
+
+  if(!filesToUpload.length) return;
+  setSyncStatus('📤 '+filesToUpload.length+' கோப்பு(கள்) Drive-க்கு பதிவேற்றப்படுகிறது...');
+  try{
     for(const f of filesToUpload){
-      const res=await fetch(SCRIPT_URL,{
-        method:'POST',
-        body: JSON.stringify({action:'uploadFile', dhsId:record.id, fileName:f.name, base64:f.dataUrl})
-      });
-      const data=await res.json();
+      const data=await cloudCall({action:'uploadFile', dhsId:record.id, fileName:f.name, base64:f.dataUrl});
       if(data.url){
         if(f.field==='photo') record.photo.driveLink=data.url;
         else if(f.field==='signature') record.signature.driveLink=data.url;
@@ -916,13 +1084,11 @@ async function uploadRecordFiles(record){
       }
     }
     await dbPut(record);
-    // push record metadata to sheet too
-    await fetch(SCRIPT_URL,{method:'POST', body: JSON.stringify({action:'syncPush', record})});
-    document.getElementById('syncStatusText').textContent='✅ கோப்புகள் Drive-இல் சேமிக்கப்பட்டன — '+new Date().toLocaleTimeString('ta-IN');
+    await pushRecordToCloud(record); // Drive link-களுடன் Sheet-ஐ மீண்டும் புதுப்பிக்கவும்
     toast('கோப்புகள் Drive-க்கு பதிவேற்றப்பட்டன');
     await renderRecordsTable();
   }catch(err){
-    document.getElementById('syncStatusText').textContent='⚠️ பதிவேற்றத்தில் பிழை — மீண்டும் முயற்சிக்கவும்';
+    setSyncStatus('⚠️ கோப்பு பதிவேற்றத்தில் பிழை — மீண்டும் முயற்சிக்கவும்');
     console.error(err);
   }
 }
@@ -1313,10 +1479,15 @@ async function editRecord(id){
   document.getElementById('saveHint').textContent='பணி எண் '+r.id+' திருத்தப்படுகிறது.';
 }
 async function deleteRecord(id){
-  if(!confirm(id+' பணியை நீக்க வேண்டுமா?')) return;
+  if(!confirm(id+' பணியை நீக்க வேண்டுமா? (Sheet-இலிருந்தும் நீக்கப்படும்)')) return;
   await dbDelete(id);
+  if(SCRIPT_URL){
+    try{ await cloudCall({action:'deleteRecord', id}); }
+    catch(err){ console.error(err); setSyncStatus('⚠️ Sheet-இலிருந்து நீக்க முடியவில்லை'); }
+  }
   toast('நீக்கப்பட்டது');
   renderRecordsTable();
+  if(document.getElementById('tab-staff').style.display!=='none') renderStaffPage();
 }
 
 /* ===================== EXPORT ===================== */
@@ -1350,27 +1521,24 @@ document.getElementById('logoutAdminBtn').addEventListener('click', ()=>{
   document.getElementById('adminPanel').style.display='none';
   document.getElementById('adminPass').value='';
 });
-document.getElementById('saveScriptUrlBtn').addEventListener('click', ()=>{
+document.getElementById('saveScriptUrlBtn').addEventListener('click', async ()=>{
   SCRIPT_URL=document.getElementById('scriptUrlInput').value.trim();
   localStorage.setItem('dhass_wo_script_url', SCRIPT_URL);
   toast('Script URL சேமிக்கப்பட்டது');
+  if(SCRIPT_URL){ await pullMastersFromCloud(); await pullFromCloud(); }
 });
 document.getElementById('syncNowBtn').addEventListener('click', async ()=>{
   if(!SCRIPT_URL){toast('முதலில் Apps Script URL சேமிக்கவும்');return;}
-  document.getElementById('syncStatusText').textContent='🔄 Sync செய்யப்படுகிறது...';
-  try{
-    const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'syncPull'})});
-    const data=await res.json();
-    if(data.records && Array.isArray(data.records)){
-      for(const rec of data.records){ await dbPut(rec); }
-      document.getElementById('syncStatusText').textContent='✅ Sync முடிந்தது — '+new Date().toLocaleTimeString('ta-IN');
-      renderRecordsTable();
-      toast('Sync வெற்றி');
-    }
-  }catch(err){
-    document.getElementById('syncStatusText').textContent='⚠️ Sync பிழை';
-    console.error(err);
-  }
+  await pushPendingRecords();
+  await pullMastersFromCloud();
+  await pullFromCloud();
+});
+document.getElementById('forcePushBtn').addEventListener('click', async ()=>{
+  if(!SCRIPT_URL){toast('முதலில் Apps Script URL சேமிக்கவும்');return;}
+  if(!confirm('இந்த கணினியில் உள்ள அனைத்து பணிகளையும் Sheet-க்கு அனுப்பவா?')) return;
+  await pushAllLocalRecords();
+  await pushMastersToCloud();
+  await pullFromCloud();
 });
 
 /* ===================== INIT ===================== */
@@ -1381,6 +1549,28 @@ document.getElementById('syncNowBtn').addEventListener('click', async ()=>{
   populateStaffPageSelect();
   initNewForm();
   await renderRecordsTable();
+
+  if(SCRIPT_URL){
+    setSyncStatus('🔄 Sheet-இலிருந்து தரவு ஏற்றப்படுகிறது...');
+    await pullMastersFromCloud();
+    await pushPendingRecords();
+    await pullFromCloud(true);
+    initNewForm(); // சரியான அடுத்த DHS எண்ணுடன்
+
+    // ஒவ்வொரு 60 வினாடிக்கும் தானாக Sync (படிவம் திருத்தப்படாத போது மட்டும்)
+    setInterval(async ()=>{
+      if(document.hidden) return;
+      await pushPendingRecords();
+      await pullFromCloud(true);
+    }, 60000);
+
+    // மற்றொரு tab/window-க்கு மாறி திரும்பி வரும்போது புதுப்பிக்கவும்
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden) pullFromCloud(true);
+    });
+  } else {
+    setSyncStatus('⚠️ Cloud Sync அமைக்கப்படவில்லை — தரவு இந்த கணினியில் மட்டும் இருக்கும்');
+  }
 })();
 </script>
 </body>
