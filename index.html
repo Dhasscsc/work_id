@@ -17,7 +17,8 @@
   nav{display:flex;gap:6px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:64px;z-index:49;overflow-x:auto;}
   nav button{border:none;background:#eef2f6;color:var(--text);padding:9px 16px;border-radius:20px;font-size:14px;cursor:pointer;white-space:nowrap;font-weight:600;}
   nav button.active{background:var(--brand);color:#fff;}
-  main{max-width:980px;margin:0 auto;padding:16px;}
+  main{max-width:100%;margin:0 auto;padding:16px;}
+  .narrow{max-width:980px;margin:0 auto;}
   .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
   .card h2{margin:0 0 12px;font-size:17px;color:var(--brand-dark);border-bottom:2px solid var(--accent);padding-bottom:6px;}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
@@ -47,6 +48,12 @@
   .actions-cell{display:flex;gap:4px;flex-wrap:wrap;}
   .search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
   .search-bar input,.search-bar select{flex:1;min-width:140px;}
+  .stat-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .stat-card{flex:1;min-width:120px;background:#f6f9fb;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:.15s;}
+  .stat-card:hover{background:#eaf1f8;}
+  .stat-card.active-filter{border-color:var(--brand);background:#eaf1f8;box-shadow:0 0 0 2px rgba(15,76,129,.15);}
+  .stat-num{font-size:24px;font-weight:800;color:var(--brand-dark);}
+  .stat-label{font-size:12px;color:var(--muted);margin-top:2px;}
   .master-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
   .master-row{display:flex;gap:6px;align-items:center;background:#f6f9fb;padding:6px 8px;border-radius:8px;}
   .master-row span{flex:1;font-size:14px;}
@@ -71,6 +78,7 @@
   .tag-status{font-weight:700;}
   @media print{
     header,nav,.no-print{display:none!important;}
+    body.printing-receipt main{display:none!important;}
     body{background:#fff;}
     main{padding:0;max-width:100%;}
   }
@@ -89,13 +97,14 @@
 <nav class="no-print">
   <button data-tab="new" class="active">➕ புதிய பணி</button>
   <button data-tab="list">📋 பணிகள் பட்டியல்</button>
+  <button data-tab="staff">👷 பணியாளர் பக்கம்</button>
   <button data-tab="admin">🛠️ நிர்வாகம்</button>
 </nav>
 
 <main>
 
 <!-- ===================== NEW WORK ORDER TAB ===================== -->
-<section id="tab-new">
+<section id="tab-new" class="narrow">
   <div class="card">
     <h2>பணி விவரம்</h2>
     <div class="grid">
@@ -207,10 +216,6 @@
           <button type="button" class="btn btn-outline btn-sm" id="sigClear">🧹 அழி</button>
           <span class="hint">விரலால் / மவுஸால் கையெழுத்திடவும்</span>
         </div>
-        <div class="field" style="margin-top:8px;">
-          <label>அல்லது கையெழுத்து படமாக பதிவேற்று</label>
-          <input type="file" id="f_signature" accept="image/*" capture="environment">
-        </div>
       </div>
     </div>
   </div>
@@ -239,10 +244,11 @@
     <div class="row-inline" style="flex-wrap:wrap;gap:10px;">
       <button class="btn btn-primary" id="saveBtn">💾 பதிவு செய்</button>
       <button class="btn btn-outline" id="resetBtn">↺ புதிதாக</button>
-      <button class="btn btn-accent" id="whatsappBtn" disabled>📤 WhatsApp அனுப்பு</button>
+      <button class="btn btn-accent" id="whatsappBtn" disabled>📤 வாடிக்கையாளருக்கு அனுப்பு</button>
+      <button class="btn btn-accent" id="staffWhatsappBtn" disabled style="background:#0f7a63;">👷 பணியாளருக்கு அனுப்பு</button>
       <button class="btn btn-warn" id="printReceiptBtn" disabled>🖨️ இரசீது பிரிண்ட்</button>
     </div>
-    <p class="hint" id="saveHint">பதிவு செய்த பின் WhatsApp / இரசீது பொத்தான்கள் இயங்கும்.</p>
+    <p class="hint" id="saveHint">பதிவு செய்த பின் பொத்தான்கள் இயங்கும். வாடிக்கையாளருக்கு முடிந்த ஆவணம்+இரசீது மட்டும், பணியாளருக்கு வேலை ஆவணம் மட்டும் (கட்டண விவரம் இல்லாமல்) அனுப்பப்படும்.</p>
   </div>
 </section>
 
@@ -250,6 +256,11 @@
 <section id="tab-list" style="display:none;">
   <div class="card">
     <h2>பணிகள் பட்டியல்</h2>
+    <div class="stat-row" id="statRow">
+      <div class="stat-card active-filter" data-filter="all"><div class="stat-num" id="statTotal">0</div><div class="stat-label">மொத்த பணிகள்</div></div>
+      <div class="stat-card" data-filter="done"><div class="stat-num" id="statDone">0</div><div class="stat-label">முடிந்தது</div></div>
+      <div class="stat-card" data-filter="active"><div class="stat-num" id="statActive">0</div><div class="stat-label">செயலில்</div></div>
+    </div>
     <div class="search-bar">
       <input type="text" id="searchBox" placeholder="🔍 பெயர் / மொபைல் / பணி எண் தேடு...">
       <select id="filterStatus">
@@ -274,8 +285,33 @@
   </div>
 </section>
 
+<!-- ===================== STAFF WORK PAGE TAB ===================== -->
+<section id="tab-staff" style="display:none;">
+  <div class="card">
+    <h2>பணியாளர் பணி பட்டியல்</h2>
+    <div class="field">
+      <label>பணியாளர் தேர்வு செய்யவும்</label>
+      <select id="staffPageSelect"></select>
+    </div>
+    <div class="stat-row" id="staffStatRow">
+      <div class="stat-card active-filter" data-sfilter="all"><div class="stat-num" id="staffStatTotal">0</div><div class="stat-label">மொத்த பணிகள்</div></div>
+      <div class="stat-card" data-sfilter="done"><div class="stat-num" id="staffStatDone">0</div><div class="stat-label">முடிந்தது</div></div>
+      <div class="stat-card" data-sfilter="active"><div class="stat-num" id="staffStatActive">0</div><div class="stat-label">செயலில்</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>பணி எண்</th><th>நாள்</th><th>வாடிக்கையாளர்</th><th>சேவை</th><th>நிலை</th>
+          <th>பணியாளர் கட்டணம்</th><th>அட்வான்ஸ்</th><th>பேலன்ஸ்</th><th>செயல்கள்</th>
+        </tr></thead>
+        <tbody id="staffRecordsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <!-- ===================== ADMIN TAB ===================== -->
-<section id="tab-admin" style="display:none;">
+<section id="tab-admin" class="narrow" style="display:none;">
   <div class="card" id="adminGate">
     <h2>நிர்வாக அனுமதி</h2>
     <div class="field">
@@ -309,8 +345,12 @@
       <div class="master-list" id="list_serviceNamesUnderCat"></div>
     </div>
     <div class="card">
-      <h2>பணியாளர் நிர்வாகம்</h2>
-      <div class="row-inline"><input type="text" id="new_staff" placeholder="புதிய பணியாளர் பெயர்"><button class="btn btn-primary btn-sm" onclick="addMaster('staffNames','new_staff')">➕ சேர்</button></div>
+      <h2>பணியாளர் நிர்வாகம் <span class="hint">(மொபைல் நம்பர் சேர்க்கவும் — வேலை ஆவணம் WhatsApp அனுப்ப தேவை)</span></h2>
+      <div class="grid">
+        <div class="field"><label>பணியாளர் பெயர்</label><input type="text" id="new_staff_name" placeholder="பெயர்"></div>
+        <div class="field"><label>மொபைல் நம்பர்</label><input type="tel" id="new_staff_mobile" maxlength="10" placeholder="10 இலக்க எண்"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addStaff()">➕ சேர்</button>
       <div class="master-list" id="list_staffNames"></div>
     </div>
 
@@ -409,12 +449,17 @@ function dbGetAll(){
 }
 
 /* ===================== MASTER DATA (localStorage) ===================== */
-const MASTER_KEYS=['workTypes','serviceCategories','staffNames']; // serviceNames நிர்வாகம் தனியாக (category-வாரியாக)
+const MASTER_KEYS=['workTypes','serviceCategories']; // serviceNames & staffNames நிர்வாகம் தனியாக
 function loadMasters(){
   let workTypes = JSON.parse(localStorage.getItem('dhass_wo_workTypes')||'null');
   if(!workTypes){ workTypes=['கடை வேலை','வெளி வேலை']; localStorage.setItem('dhass_wo_workTypes',JSON.stringify(workTypes)); }
   let serviceCategories = JSON.parse(localStorage.getItem('dhass_wo_serviceCategories')||'[]');
-  let staffNames = JSON.parse(localStorage.getItem('dhass_wo_staffNames')||'[]');
+  // staffNames: [{name, mobile}] — பழைய flat string பட்டியல் இருந்தால் migrate செய்யவும்
+  let staffNamesRaw = JSON.parse(localStorage.getItem('dhass_wo_staffNames')||'[]');
+  let staffNames = staffNamesRaw.map(s=> (typeof s==='string') ? {name:s, mobile:''} : s);
+  if(JSON.stringify(staffNames)!==JSON.stringify(staffNamesRaw)){
+    localStorage.setItem('dhass_wo_staffNames', JSON.stringify(staffNames));
+  }
   // serviceNamesByCat: { "சேவை வகை பெயர்": ["சேவை பெயர் 1","சேவை பெயர் 2", ...] }
   let serviceNamesByCat = JSON.parse(localStorage.getItem('dhass_wo_serviceNamesByCat')||'null');
   if(!serviceNamesByCat){
@@ -435,6 +480,11 @@ function saveMasterList(key,arr){ localStorage.setItem('dhass_wo_'+key, JSON.str
 function saveServiceNamesByCat(){ localStorage.setItem('dhass_wo_serviceNamesByCat', JSON.stringify(MASTERS.serviceNamesByCat)); }
 let MASTERS = loadMasters();
 
+function getStaffMobile(name){
+  const s=MASTERS.staffNames.find(x=>x.name===name);
+  return s ? (s.mobile||'') : '';
+}
+
 function populateSelect(selectEl, arr, placeholder){
   selectEl.innerHTML='';
   if(placeholder){
@@ -450,10 +500,11 @@ function refreshFormSelects(){
   populateSelect(document.getElementById('f_worktype'), MASTERS.workTypes, '-- தேர்வு செய்யவும் --');
   populateSelect(document.getElementById('f_svccat'), MASTERS.serviceCategories, '-- தேர்வு செய்யவும் --');
   refreshServiceNameSelect();
-  populateSelect(document.getElementById('f_staff'), MASTERS.staffNames, '-- தேர்வு செய்யவும் --');
+  populateSelect(document.getElementById('f_staff'), MASTERS.staffNames.map(s=>s.name), '-- தேர்வு செய்யவும் --');
   const fw=document.getElementById('filterWorktype');
   fw.innerHTML='<option value="">அனைத்து வேலை வகை</option>';
   MASTERS.workTypes.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fw.appendChild(o);});
+  if(typeof populateStaffPageSelect==='function') populateStaffPageSelect();
 }
 function refreshServiceNameSelect(){
   const cat=document.getElementById('f_svccat').value;
@@ -474,7 +525,7 @@ function renderMasterList(key){
     wrap.appendChild(row);
   });
 }
-function renderAllMasterLists(){ MASTER_KEYS.forEach(renderMasterList); renderSvcCatOptionsInAdmin(); }
+function renderAllMasterLists(){ MASTER_KEYS.forEach(renderMasterList); renderSvcCatOptionsInAdmin(); renderStaffList(); }
 function addMaster(key,inputId){
   const input=document.getElementById(inputId);
   const val=input.value.trim();
@@ -578,6 +629,54 @@ function deleteSvcName(idx){
   renderSvcNameListInAdmin(); refreshFormSelects();
   toast('நீக்கப்பட்டது');
 }
+
+/* ----- பணியாளர் நிர்வாகம் (பெயர் + மொபைல்) ----- */
+function renderStaffList(){
+  const wrap=document.getElementById('list_staffNames');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  if(!MASTERS.staffNames.length){ wrap.innerHTML='<p class="hint">இன்னும் பணியாளர்கள் இல்லை.</p>'; return; }
+  MASTERS.staffNames.forEach((s,idx)=>{
+    const row=document.createElement('div'); row.className='master-row';
+    const mobileText = s.mobile ? ('📱 '+escapeHtml(s.mobile)) : '<span class="hint">(மொபைல் இல்லை)</span>';
+    row.innerHTML=`<span>${escapeHtml(s.name)} — ${mobileText}</span>
+      <button class="btn btn-outline btn-sm" onclick="editStaff(${idx})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStaff(${idx})">🗑️</button>`;
+    wrap.appendChild(row);
+  });
+}
+function addStaff(){
+  const nameInput=document.getElementById('new_staff_name');
+  const mobileInput=document.getElementById('new_staff_mobile');
+  const name=nameInput.value.trim();
+  const mobile=mobileInput.value.trim();
+  if(!name){ toast('பணியாளர் பெயர் உள்ளிடவும்'); return; }
+  MASTERS.staffNames.push({name, mobile});
+  saveMasterList('staffNames', MASTERS.staffNames);
+  nameInput.value=''; mobileInput.value='';
+  renderStaffList(); refreshFormSelects();
+  toast('சேர்க்கப்பட்டது');
+}
+function editStaff(idx){
+  const s=MASTERS.staffNames[idx];
+  const name=prompt('பணியாளர் பெயர்:', s.name);
+  if(name===null) return;
+  const trimmedName=name.trim();
+  if(!trimmedName) return;
+  const mobile=prompt('மொபைல் நம்பர்:', s.mobile||'');
+  if(mobile===null) return;
+  MASTERS.staffNames[idx]={name:trimmedName, mobile:mobile.trim()};
+  saveMasterList('staffNames', MASTERS.staffNames);
+  renderStaffList(); refreshFormSelects();
+  toast('திருத்தப்பட்டது');
+}
+function deleteStaff(idx){
+  if(!confirm('நீக்க வேண்டுமா?')) return;
+  MASTERS.staffNames.splice(idx,1);
+  saveMasterList('staffNames', MASTERS.staffNames);
+  renderStaffList(); refreshFormSelects();
+  toast('நீக்கப்பட்டது');
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ===================== DHS NUMBER GENERATOR ===================== */
@@ -623,7 +722,6 @@ function initNewForm(){
   document.getElementById('f_staff_advance').value=0;
   document.getElementById('f_notes').value='';
   document.getElementById('f_photo').value='';
-  document.getElementById('f_signature').value='';
   document.getElementById('f_workdoc').value='';
   document.getElementById('f_donedoc').value='';
   currentPhoto=null; currentSignature=null; currentWorkDocs=[]; currentDoneDocs=[];
@@ -634,8 +732,9 @@ function initNewForm(){
   updateBalances();
   toggleOutsideWorkBox();
   document.getElementById('whatsappBtn').disabled=true;
+  document.getElementById('staffWhatsappBtn').disabled=true;
   document.getElementById('printReceiptBtn').disabled=true;
-  document.getElementById('saveHint').textContent='பதிவு செய்த பின் WhatsApp / இரசீது பொத்தான்கள் இயங்கும்.';
+  document.getElementById('saveHint').textContent='பதிவு செய்த பின் பொத்தான்கள் இயங்கும். வாடிக்கையாளருக்கு முடிந்த ஆவணம்+இரசீது மட்டும், பணியாளருக்கு வேலை ஆவணம் மட்டும் (கட்டண விவரம் இல்லாமல்) அனுப்பப்படும்.';
 }
 
 function updateBalances(){
@@ -677,13 +776,6 @@ document.getElementById('f_photo').addEventListener('change', async (e)=>{
   const dataUrl=await fileToDataUrl(file);
   currentPhoto={name:file.name, dataUrl, driveLink:null};
   document.getElementById('photoPreviewWrap').innerHTML=`<img src="${dataUrl}" class="thumb" style="margin-top:6px;">`;
-});
-document.getElementById('f_signature').addEventListener('change', async (e)=>{
-  const file=e.target.files[0];
-  if(!file) return;
-  const dataUrl=await fileToDataUrl(file);
-  currentSignature={dataUrl, driveLink:null};
-  drawSignatureFromDataUrl(dataUrl);
 });
 document.getElementById('f_workdoc').addEventListener('change', async (e)=>{
   for(const file of e.target.files){
@@ -743,18 +835,6 @@ document.getElementById('sigClear').addEventListener('click',clearSignaturePad);
 function clearSignaturePad(){
   sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
   sigHasContent=false; currentSignature=null;
-  const sigFileInput=document.getElementById('f_signature');
-  if(sigFileInput) sigFileInput.value='';
-}
-function drawSignatureFromDataUrl(dataUrl){
-  const ratio=window.devicePixelRatio||1;
-  const img=new Image();
-  img.onload=()=>{
-    sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
-    sigCtx.drawImage(img,0,0,sigCanvas.width/ratio,sigCanvas.height/ratio);
-    sigHasContent=true;
-  };
-  img.src=dataUrl;
 }
 
 /* ===================== SAVE RECORD ===================== */
@@ -802,6 +882,7 @@ async function saveRecord(){
 
   editingId=id;
   document.getElementById('whatsappBtn').disabled=false;
+  document.getElementById('staffWhatsappBtn').disabled=false;
   document.getElementById('printReceiptBtn').disabled=false;
   document.getElementById('saveHint').textContent='பணி எண் '+id+' பதிவு செய்யப்பட்டது.';
 
@@ -848,34 +929,109 @@ async function uploadRecordFiles(record){
 
 document.getElementById('resetBtn').addEventListener('click', initNewForm);
 
-/* ===================== WHATSAPP SEND ===================== */
+/* ===================== RECEIPT IMAGE GENERATOR (for WhatsApp link) ===================== */
+function generateReceiptCanvasDataUrl(record){
+  const W=380, H=440;
+  const canvas=document.createElement('canvas');
+  const scale=2;
+  canvas.width=W*scale; canvas.height=H*scale;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(scale,scale);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#1f2d3a'; ctx.textBaseline='top';
+  let y=18;
+  ctx.font='bold 17px "Noto Sans Tamil","Latha",sans-serif'; ctx.textAlign='center';
+  ctx.fillText('தாஸ் பொது சேவை மையம்', W/2, y); y+=24;
+  ctx.font='11px "Noto Sans Tamil","Latha",sans-serif';
+  ctx.fillText('Thoothukudi | இரசீது', W/2, y); y+=22;
+  ctx.textAlign='left';
+  ctx.strokeStyle='#cccccc'; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); y+=12;
+  ctx.font='13px "Noto Sans Tamil","Latha",sans-serif';
+  const lines=[
+    `பணி எண்: ${record.id}`,
+    `நாள்/நேரம்: ${record.date} ${record.time}`,
+    `வாடிக்கையாளர்: ${record.custname}`,
+    `மொபைல்: ${record.mobile}`,
+    `சேவை: ${record.svcname||record.svccat||'-'}`,
+    `வேலை வகை: ${record.worktype}`,
+    `குறிப்பு எண்: ${record.refno||'-'}`
+  ];
+  lines.forEach(l=>{ ctx.fillText(l,18,y); y+=21; });
+  y+=6; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); y+=14;
+  const moneyLines=[
+    `சேவை கட்டணம்: ₹${record.fee}`,
+    `அட்வான்ஸ்: ₹${record.advance}`,
+    `பேலன்ஸ்: ₹${record.balance}`
+  ];
+  moneyLines.forEach(l=>{ ctx.fillText(l,18,y); y+=21; });
+  y+=6; ctx.beginPath(); ctx.moveTo(18,y); ctx.lineTo(W-18,y); ctx.stroke(); y+=14;
+  ctx.fillText(`நிலை: ${record.status}`,18,y); y+=28;
+  ctx.textAlign='center'; ctx.font='11px "Noto Sans Tamil","Latha",sans-serif';
+  ctx.fillText('நன்றி! மீண்டும் வருக.', W/2, y);
+  return canvas.toDataURL('image/png');
+}
+
+/* ===================== WHATSAPP SEND — வாடிக்கையாளருக்கு ===================== */
 document.getElementById('whatsappBtn').addEventListener('click', async ()=>{
   if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
-  const all=await dbGetAll();
-  const record=all.find(r=>r.id===editingId);
+  let record = await getRecordById(editingId);
   if(!record){toast('பணி கிடைக்கவில்லை');return;}
 
-  let link='';
+  let doneLink='';
   if(record.doneDocs && record.doneDocs.length && record.doneDocs[0].driveLink){
-    link=record.doneDocs[0].driveLink;
+    doneLink=record.doneDocs[0].driveLink;
   } else if(record.workDocs && record.workDocs.length && record.workDocs[0].driveLink){
-    link=record.workDocs[0].driveLink;
+    doneLink=record.workDocs[0].driveLink;
+  }
+
+  if(!record.receiptLink && SCRIPT_URL){
+    toast('இரசீது தயார் செய்யப்படுகிறது...');
+    try{
+      const receiptDataUrl=generateReceiptCanvasDataUrl(record);
+      const res=await fetch(SCRIPT_URL,{method:'POST', body: JSON.stringify({action:'uploadFile', dhsId:record.id, fileName:'receipt.png', base64:receiptDataUrl})});
+      const data=await res.json();
+      if(data.url){ record.receiptLink=data.url; await dbPut(record); }
+    }catch(err){ console.error(err); }
   }
 
   let msg = `வணக்கம் ${record.custname},\n`+
     `தாஸ் பொது சேவை மையம்\n`+
     `பணி எண்: ${record.id}\n`+
     `சேவை: ${record.svcname||record.svccat||'-'}\n`+
-    `நிலை: ${record.status}\n`+
-    `கட்டணம்: ₹${record.fee} | அட்வான்ஸ்: ₹${record.advance} | பேலன்ஸ்: ₹${record.balance}\n`;
-  if(link){
-    msg += `\nஆவணத்தை இங்கே பார்க்கவும்:\n${link}\n`;
-  } else if(SCRIPT_URL){
-    msg += `\n(ஆவணம் இன்னும் பதிவேற்றப்படவில்லை)\n`;
-  }
+    `நிலை: ${record.status}\n`;
+  if(doneLink) msg += `\nமுடிந்த ஆவணம்:\n${doneLink}\n`;
+  if(record.receiptLink) msg += `\nஇரசீது:\n${record.receiptLink}\n`;
+  if(!doneLink && !record.receiptLink) msg += `\n(ஆவணம் / இரசீது இன்னும் தயாராகவில்லை)\n`;
   msg += `\nநன்றி!`;
 
   const waNumber = record.mobile.length===10 ? '91'+record.mobile : record.mobile;
+  const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+  await renderRecordsTable();
+});
+
+/* ===================== WHATSAPP SEND — பணியாளருக்கு ===================== */
+document.getElementById('staffWhatsappBtn').addEventListener('click', async ()=>{
+  if(!editingId){toast('முதலில் பணியை பதிவு செய்யவும்');return;}
+  const record = await getRecordById(editingId);
+  if(!record){toast('பணி கிடைக்கவில்லை');return;}
+  if(!record.staff){toast('பணியாளர் தேர்வு செய்யப்படவில்லை');return;}
+  const staffMobile = getStaffMobile(record.staff).replace(/\D/g,'');
+  if(!staffMobile){toast('இந்த பணியாளருக்கு மொபைல் நம்பர் நிர்வாகத்தில் சேர்க்கப்படவில்லை');return;}
+
+  let link='';
+  if(record.workDocs && record.workDocs.length && record.workDocs[0].driveLink) link=record.workDocs[0].driveLink;
+
+  let msg = `வணக்கம் ${record.staff},\n`+
+    `தாஸ் பொது சேவை மையம்\n`+
+    `பணி எண்: ${record.id}\n`+
+    `சேவை: ${record.svcname||record.svccat||'-'}\n`+
+    `வேலை வகை: ${record.worktype}\n`;
+  if(link) msg += `\nவேலை ஆவணம்:\n${link}\n`;
+  else msg += `\n(வேலை ஆவணம் இன்னும் பதிவேற்றப்படவில்லை)\n`;
+  msg += `\nநன்றி!`;
+
+  const waNumber = staffMobile.length===10 ? '91'+staffMobile : staffMobile;
   const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
 });
@@ -910,24 +1066,41 @@ function buildAndPrintReceipt(record){
       <p><b>நிலை:</b> ${record.status}</p>
       <p style="text-align:center;margin-top:14px;font-size:12px;">நன்றி! மீண்டும் வருக.</p>
     </div>`;
+  document.body.classList.add('printing-receipt');
   area.style.display='block';
   window.print();
   area.style.display='none';
+  document.body.classList.remove('printing-receipt');
 }
+window.addEventListener('afterprint', ()=>{
+  document.body.classList.remove('printing-receipt');
+  document.getElementById('receiptArea').style.display='none';
+});
 
 /* ===================== TABS ===================== */
 document.querySelectorAll('nav button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    ['new','list','admin'].forEach(t=>{
+    ['new','list','staff','admin'].forEach(t=>{
       document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab)?'block':'none';
     });
     if(btn.dataset.tab==='list') renderRecordsTable();
+    if(btn.dataset.tab==='staff'){ populateStaffPageSelect(); renderStaffPage(); }
   });
 });
 
 /* ===================== RECORDS TABLE ===================== */
+let quickFilter='all'; // 'all' | 'done' | 'active'
+document.querySelectorAll('#statRow .stat-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    quickFilter=card.dataset.filter;
+    document.querySelectorAll('#statRow .stat-card').forEach(c=>c.classList.remove('active-filter'));
+    card.classList.add('active-filter');
+    document.getElementById('filterStatus').value='';
+    renderRecordsTable();
+  });
+});
 function statusPillClass(status){
   if(status==='முடிந்தது') return 'done';
   if(status==='நடைபெறுகிறது') return 'progress';
@@ -937,11 +1110,18 @@ function statusPillClass(status){
 async function renderRecordsTable(){
   const all=await dbGetAll();
   all.sort((a,b)=> (b.id>a.id?1:-1));
+
+  document.getElementById('statTotal').textContent=all.length;
+  document.getElementById('statDone').textContent=all.filter(r=>r.status==='முடிந்தது').length;
+  document.getElementById('statActive').textContent=all.filter(r=>r.status==='பெண்டிங்'||r.status==='நடைபெறுகிறது').length;
+
   const search=(document.getElementById('searchBox').value||'').toLowerCase();
   const filterStatus=document.getElementById('filterStatus').value;
   const filterWorktype=document.getElementById('filterWorktype').value;
 
   const filtered=all.filter(r=>{
+    if(quickFilter==='done' && r.status!=='முடிந்தது') return false;
+    if(quickFilter==='active' && !(r.status==='பெண்டிங்'||r.status==='நடைபெறுகிறது')) return false;
     if(filterStatus && r.status!==filterStatus) return false;
     if(filterWorktype && r.worktype!==filterWorktype) return false;
     if(search){
@@ -975,8 +1155,76 @@ async function renderRecordsTable(){
   });
 }
 document.getElementById('searchBox').addEventListener('input', renderRecordsTable);
-document.getElementById('filterStatus').addEventListener('change', renderRecordsTable);
+document.getElementById('filterStatus').addEventListener('change', ()=>{
+  quickFilter='all';
+  document.querySelectorAll('#statRow .stat-card').forEach(c=>c.classList.remove('active-filter'));
+  document.querySelector('#statRow .stat-card[data-filter="all"]').classList.add('active-filter');
+  renderRecordsTable();
+});
 document.getElementById('filterWorktype').addEventListener('change', renderRecordsTable);
+
+/* ===================== STAFF WORK PAGE ===================== */
+let staffQuickFilter='all';
+document.getElementById('staffPageSelect').addEventListener('change', renderStaffPage);
+document.querySelectorAll('#staffStatRow .stat-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    staffQuickFilter=card.dataset.sfilter;
+    document.querySelectorAll('#staffStatRow .stat-card').forEach(c=>c.classList.remove('active-filter'));
+    card.classList.add('active-filter');
+    renderStaffPage();
+  });
+});
+function populateStaffPageSelect(){
+  const sel=document.getElementById('staffPageSelect');
+  if(!sel) return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">-- பணியாளர் தேர்வு செய்யவும் --</option>';
+  MASTERS.staffNames.forEach(s=>{
+    const o=document.createElement('option'); o.value=s.name; o.textContent=s.name; sel.appendChild(o);
+  });
+  if(MASTERS.staffNames.some(s=>s.name===prev)) sel.value=prev;
+}
+async function renderStaffPage(){
+  const staffName=document.getElementById('staffPageSelect').value;
+  const all=await dbGetAll();
+  const mine = staffName ? all.filter(r=>r.staff===staffName) : [];
+
+  document.getElementById('staffStatTotal').textContent=mine.length;
+  document.getElementById('staffStatDone').textContent=mine.filter(r=>r.status==='முடிந்தது').length;
+  document.getElementById('staffStatActive').textContent=mine.filter(r=>r.status==='பெண்டிங்'||r.status==='நடைபெறுகிறது').length;
+
+  const filtered=mine.filter(r=>{
+    if(staffQuickFilter==='done' && r.status!=='முடிந்தது') return false;
+    if(staffQuickFilter==='active' && !(r.status==='பெண்டிங்'||r.status==='நடைபெறுகிறது')) return false;
+    return true;
+  });
+  filtered.sort((a,b)=> (b.id>a.id?1:-1));
+
+  const tbody=document.getElementById('staffRecordsTbody');
+  tbody.innerHTML='';
+  if(!staffName){
+    tbody.innerHTML='<tr><td colspan="9" class="hint">மேலே ஒரு பணியாளரைத் தேர்வு செய்யவும்.</td></tr>';
+    return;
+  }
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="9" class="hint">பணிகள் இல்லை.</td></tr>';
+    return;
+  }
+  filtered.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${r.id}</td>
+      <td>${r.date}</td>
+      <td>${escapeHtml(r.custname)}</td>
+      <td>${escapeHtml(r.svcname||r.svccat||'-')}</td>
+      <td><span class="pill ${statusPillClass(r.status)}">${r.status}</span></td>
+      <td>₹${r.staffFee||0}</td>
+      <td>₹${r.staffAdvance||0}</td>
+      <td>₹${r.staffBalance||0}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="viewRecord('${r.id}')">👁️</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
 
 async function getRecordById(id){
   const all=await dbGetAll();
@@ -1032,19 +1280,22 @@ async function editRecord(id){
   document.getElementById('f_staff_advance').value=r.staffAdvance||0;
   document.getElementById('f_notes').value=r.notes||'';
   currentPhoto=r.photo||null;
+  currentSignature=r.signature||null;
   currentWorkDocs=r.workDocs||[];
   currentDoneDocs=r.doneDocs||[];
   document.getElementById('photoPreviewWrap').innerHTML = currentPhoto? `<img src="${currentPhoto.dataUrl}" class="thumb" style="margin-top:6px;">`:'';
   renderDocChips('workDocList', currentWorkDocs);
   renderDocChips('doneDocList', currentDoneDocs);
   clearSignaturePad();
-  currentSignature=r.signature||null;
-  if(currentSignature && currentSignature.dataUrl){
-    drawSignatureFromDataUrl(currentSignature.dataUrl);
+  if(currentSignature){
+    const img=new Image();
+    img.onload=()=>{ sigCtx.drawImage(img,0,0,sigCanvas.width/(window.devicePixelRatio||1),sigCanvas.height/(window.devicePixelRatio||1)); };
+    img.src=currentSignature.dataUrl;
   }
   toggleOutsideWorkBox();
   updateBalances();
   document.getElementById('whatsappBtn').disabled=false;
+  document.getElementById('staffWhatsappBtn').disabled=false;
   document.getElementById('printReceiptBtn').disabled=false;
   document.getElementById('saveHint').textContent='பணி எண் '+r.id+' திருத்தப்படுகிறது.';
 }
@@ -1114,6 +1365,7 @@ document.getElementById('syncNowBtn').addEventListener('click', async ()=>{
   await openDB();
   resizeSigCanvas();
   refreshFormSelects();
+  populateStaffPageSelect();
   initNewForm();
   await renderRecordsTable();
 })();
