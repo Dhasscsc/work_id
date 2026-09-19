@@ -85,6 +85,8 @@
   #receiptArea{display:none;}
   .sync-status{font-size:12px;color:var(--muted);}
   .req{color:var(--danger);}
+  .txt-pos{color:var(--accent2);}
+  .txt-neg{color:var(--danger);}
 </style>
 </head>
 <body>
@@ -355,6 +357,53 @@
     </div>
 
     <div class="card">
+      <h2>💰 விலைப் பட்டியல்</h2>
+      <div class="grid">
+        <div class="field">
+          <label>சேவை வகை</label>
+          <select id="pl_svccat" onchange="plRefreshSvcName()"></select>
+        </div>
+        <div class="field">
+          <label>சேவை பெயர்</label>
+          <select id="pl_svcname"></select>
+        </div>
+        <div class="field">
+          <label>வேலை வகை</label>
+          <select id="pl_worktype"></select>
+        </div>
+        <div class="field">
+          <label>பணியாளர்</label>
+          <select id="pl_staff"></select>
+        </div>
+        <div class="field">
+          <label>வாங்கும் விலை (₹)</label>
+          <input type="number" id="pl_buyprice" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label>விற்பனை விலை (₹)</label>
+          <input type="number" id="pl_sellprice" min="0" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="row-inline" style="flex-wrap:wrap;gap:8px;">
+        <button class="btn btn-primary btn-sm" id="pl_saveBtn" onclick="savePriceItem()">➕ சேர்</button>
+        <button class="btn btn-outline btn-sm" id="pl_cancelBtn" onclick="cancelPriceEdit()" style="display:none;">✖ ரத்து</button>
+      </div>
+
+      <div class="search-bar" style="margin-top:14px;">
+        <input type="text" id="pl_search" placeholder="🔍 சேவை பெயர் / சேவை வகை / பணியாளர் தேடு..." oninput="renderPriceList()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>சேவை பெயர்</th><th>சேவை வகை</th><th>வேலை வகை</th><th>பணியாளர்</th>
+            <th>வாங்கும் விலை</th><th>விற்பனை விலை</th><th>இலாபம்</th><th>கடைசி அப்டேட்</th><th>செயல்கள்</th>
+          </tr></thead>
+          <tbody id="priceListTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>☁️ Cloud Sync (Google Apps Script)</h2>
       <p class="hint">கோப்புகளை Google Drive-க்கு பதிவேற்றவும், பணி பட்டியலை பல கணினிகளில் காணவும் இதை அமைக்கவும். README.md-ல் உள்ள படிகளைப் பின்பற்றி Apps Script-ஐ Deploy செய்து கீழே அதன் Web App URL-ஐ ஒட்டவும்.</p>
       <div class="field">
@@ -476,10 +525,12 @@ function loadMasters(){
     localStorage.setItem('dhass_wo_serviceNamesByCat',JSON.stringify(serviceNamesByCat));
   }
   serviceCategories.forEach(cat=>{ if(!serviceNamesByCat[cat]) serviceNamesByCat[cat]=[]; });
-  return {workTypes,serviceCategories,serviceNamesByCat,staffNames};
+  const priceList = JSON.parse(localStorage.getItem('dhass_wo_priceList')||'[]');
+  return {workTypes,serviceCategories,serviceNamesByCat,staffNames,priceList};
 }
 function saveMasterList(key,arr){ localStorage.setItem('dhass_wo_'+key, JSON.stringify(arr)); }
 function saveServiceNamesByCat(){ localStorage.setItem('dhass_wo_serviceNamesByCat', JSON.stringify(MASTERS.serviceNamesByCat)); }
+function savePriceListToStorage(){ localStorage.setItem('dhass_wo_priceList', JSON.stringify(MASTERS.priceList)); }
 let MASTERS = loadMasters();
 
 function getStaffMobile(name){
@@ -527,7 +578,7 @@ function renderMasterList(key){
     wrap.appendChild(row);
   });
 }
-function renderAllMasterLists(){ MASTER_KEYS.forEach(renderMasterList); renderSvcCatOptionsInAdmin(); renderStaffList(); }
+function renderAllMasterLists(){ MASTER_KEYS.forEach(renderMasterList); renderSvcCatOptionsInAdmin(); renderStaffList(); plPopulateSelects(); renderPriceList(); }
 function addMaster(key,inputId){
   const input=document.getElementById(inputId);
   const val=input.value.trim();
@@ -680,6 +731,118 @@ function deleteStaff(idx){
   toast('நீக்கப்பட்டது');
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== விலைப் பட்டியல் (Price List) நிர்வாகம் ===================== */
+let editingPriceIdx=null;
+function plPopulateSelects(){
+  const catSel=document.getElementById('pl_svccat');
+  if(!catSel) return;
+  populateSelect(catSel, MASTERS.serviceCategories, '-- தேர்வு செய்யவும் --');
+  populateSelect(document.getElementById('pl_worktype'), MASTERS.workTypes, '-- தேர்வு செய்யவும் --');
+  populateSelect(document.getElementById('pl_staff'), MASTERS.staffNames.map(s=>s.name), '-- (விரும்பினால்) --');
+  plRefreshSvcName();
+}
+function plRefreshSvcName(){
+  const catSel=document.getElementById('pl_svccat');
+  if(!catSel) return;
+  const cat=catSel.value;
+  const names=(cat && MASTERS.serviceNamesByCat[cat]) ? MASTERS.serviceNamesByCat[cat] : [];
+  populateSelect(document.getElementById('pl_svcname'), names, cat ? '-- தேர்வு செய்யவும் --' : '-- முதலில் சேவை வகை தேர்வு செய்யவும் --');
+}
+function clearPriceForm(){
+  editingPriceIdx=null;
+  document.getElementById('pl_svccat').value='';
+  plRefreshSvcName();
+  document.getElementById('pl_worktype').value='';
+  document.getElementById('pl_staff').value='';
+  document.getElementById('pl_buyprice').value='';
+  document.getElementById('pl_sellprice').value='';
+  document.getElementById('pl_saveBtn').textContent='➕ சேர்';
+  document.getElementById('pl_cancelBtn').style.display='none';
+}
+function savePriceItem(){
+  const svccat=document.getElementById('pl_svccat').value;
+  const svcname=document.getElementById('pl_svcname').value;
+  const worktype=document.getElementById('pl_worktype').value;
+  const staff=document.getElementById('pl_staff').value;
+  const buyPrice=parseFloat(document.getElementById('pl_buyprice').value)||0;
+  const sellPrice=parseFloat(document.getElementById('pl_sellprice').value)||0;
+  if(!svccat || !svcname){ toast('சேவை வகை மற்றும் சேவை பெயர் தேர்வு செய்யவும்'); return; }
+  const item={svccat,svcname,worktype,staff,buyPrice,sellPrice,updatedAt:new Date().toISOString()};
+  if(editingPriceIdx!==null){
+    item.id=MASTERS.priceList[editingPriceIdx].id;
+    MASTERS.priceList[editingPriceIdx]=item;
+    toast('விலைப் பட்டியல் புதுப்பிக்கப்பட்டது');
+  } else {
+    item.id='PL'+Date.now();
+    MASTERS.priceList.push(item);
+    toast('விலைப் பட்டியலில் சேர்க்கப்பட்டது');
+  }
+  savePriceListToStorage();
+  clearPriceForm();
+  renderPriceList();
+  pushMastersToCloud();
+}
+function editPriceItem(idx){
+  const it=MASTERS.priceList[idx];
+  if(!it) return;
+  editingPriceIdx=idx;
+  document.getElementById('pl_svccat').value=it.svccat||'';
+  plRefreshSvcName();
+  document.getElementById('pl_svcname').value=it.svcname||'';
+  document.getElementById('pl_worktype').value=it.worktype||'';
+  document.getElementById('pl_staff').value=it.staff||'';
+  document.getElementById('pl_buyprice').value=it.buyPrice||'';
+  document.getElementById('pl_sellprice').value=it.sellPrice||'';
+  document.getElementById('pl_saveBtn').textContent='🔄 புதுப்பி';
+  document.getElementById('pl_cancelBtn').style.display='inline-block';
+  document.getElementById('pl_svccat').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelPriceEdit(){ clearPriceForm(); }
+function deletePriceItem(idx){
+  if(!confirm('இந்த விலைப் பட்டியல் பதிவை நீக்க வேண்டுமா?')) return;
+  MASTERS.priceList.splice(idx,1);
+  savePriceListToStorage();
+  renderPriceList();
+  pushMastersToCloud();
+  toast('நீக்கப்பட்டது');
+}
+function fmtDateTime(iso){
+  if(!iso) return '-';
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('ta-IN')+' '+d.toLocaleTimeString('ta-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function renderPriceList(){
+  const tbody=document.getElementById('priceListTbody');
+  if(!tbody) return;
+  const searchEl=document.getElementById('pl_search');
+  const search=(searchEl && searchEl.value || '').toLowerCase();
+  let rows=(MASTERS.priceList||[]).map((it,idx)=>({it,idx}));
+  if(search){
+    rows=rows.filter(({it})=> (it.svcname+' '+it.svccat+' '+(it.staff||'')+' '+(it.worktype||'')).toLowerCase().includes(search));
+  }
+  rows.sort((a,b)=> (b.it.updatedAt||'').localeCompare(a.it.updatedAt||''));
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="9" class="hint" style="text-align:center;padding:14px;">இன்னும் விலைப் பட்டியல் பதிவுகள் இல்லை.</td></tr>'; return; }
+  tbody.innerHTML=rows.map(({it,idx})=>{
+    const profit=(it.sellPrice||0)-(it.buyPrice||0);
+    const profitClass = profit>=0 ? 'txt-pos' : 'txt-neg';
+    return `<tr>
+      <td>${escapeHtml(it.svcname||'-')}</td>
+      <td>${escapeHtml(it.svccat||'-')}</td>
+      <td>${escapeHtml(it.worktype||'-')}</td>
+      <td>${escapeHtml(it.staff||'-')}</td>
+      <td>₹${(it.buyPrice||0).toLocaleString('en-IN')}</td>
+      <td>₹${(it.sellPrice||0).toLocaleString('en-IN')}</td>
+      <td><span class="${profitClass}" style="font-weight:700;">₹${profit.toLocaleString('en-IN')}</span></td>
+      <td>${fmtDateTime(it.updatedAt)}</td>
+      <td class="actions-cell">
+        <button class="btn btn-outline btn-sm" onclick="editPriceItem(${idx})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePriceItem(${idx})">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
 
 /* ===================== DHS NUMBER GENERATOR ===================== */
 function nextDhsId(){
@@ -1043,9 +1206,41 @@ async function pushMastersToCloud(){
       serviceCategories: MASTERS.serviceCategories,
       serviceNamesByCat: MASTERS.serviceNamesByCat,
       staffNames: MASTERS.staffNames,
+      priceList: MASTERS.priceList,
       savedAt: new Date().toISOString()
     }});
   }catch(err){ console.error(err); }
+}
+/* Union-merge helpers — இரு கணினிகளிலும் வெவ்வேறு நேரங்களில் சேர்க்கப்பட்ட
+   தரவு ஒன்றை ஒன்று மாற்றி அழிக்காமல் இருக்க (merge, overwrite அல்ல) */
+function unionArr(a,b){
+  const out=(a||[]).slice();
+  (b||[]).forEach(v=>{ if(!out.includes(v)) out.push(v); });
+  return out;
+}
+function mergeStaffNames(local,cloud){
+  const map={};
+  (local||[]).forEach(s=>{ map[s.name]=s; });
+  (cloud||[]).forEach(s=>{
+    const c = typeof s==='string' ? {name:s,mobile:''} : s;
+    if(!map[c.name]) map[c.name]=c;
+    else if(!map[c.name].mobile && c.mobile) map[c.name].mobile=c.mobile;
+  });
+  return Object.values(map);
+}
+function mergeSvcNamesByCat(local,cloud){
+  const out=Object.assign({},local);
+  Object.keys(cloud||{}).forEach(cat=>{ out[cat]=unionArr(out[cat]||[],cloud[cat]||[]); });
+  return out;
+}
+function mergePriceList(local,cloud){
+  const map={};
+  (local||[]).forEach(p=>{ map[p.id]=p; });
+  (cloud||[]).forEach(p=>{
+    const lp=map[p.id];
+    if(!lp || (p.updatedAt||'')>(lp.updatedAt||'')) map[p.id]=p;
+  });
+  return Object.values(map);
 }
 async function pullMastersFromCloud(){
   if(!SCRIPT_URL) return;
@@ -1053,12 +1248,20 @@ async function pullMastersFromCloud(){
     const data=await cloudCall({action:'loadMasters'});
     const m=data.masters;
     if(!m) { await pushMastersToCloud(); return; }
-    if(m.workTypes){ MASTERS.workTypes=m.workTypes; saveMasterList('workTypes',m.workTypes); }
-    if(m.serviceCategories){ MASTERS.serviceCategories=m.serviceCategories; saveMasterList('serviceCategories',m.serviceCategories); }
-    if(m.staffNames){ MASTERS.staffNames=m.staffNames.map(s=> typeof s==='string'?{name:s,mobile:''}:s); saveMasterList('staffNames',MASTERS.staffNames); }
-    if(m.serviceNamesByCat){ MASTERS.serviceNamesByCat=m.serviceNamesByCat; saveServiceNamesByCat(); }
+    let changed=false;
+    const before=JSON.stringify({wt:MASTERS.workTypes,sc:MASTERS.serviceCategories,sn:MASTERS.staffNames,snc:MASTERS.serviceNamesByCat,pl:MASTERS.priceList});
+    if(m.workTypes){ MASTERS.workTypes=unionArr(MASTERS.workTypes,m.workTypes); saveMasterList('workTypes',MASTERS.workTypes); }
+    if(m.serviceCategories){ MASTERS.serviceCategories=unionArr(MASTERS.serviceCategories,m.serviceCategories); saveMasterList('serviceCategories',MASTERS.serviceCategories); }
+    if(m.staffNames){ MASTERS.staffNames=mergeStaffNames(MASTERS.staffNames,m.staffNames); saveMasterList('staffNames',MASTERS.staffNames); }
+    if(m.serviceNamesByCat){ MASTERS.serviceNamesByCat=mergeSvcNamesByCat(MASTERS.serviceNamesByCat,m.serviceNamesByCat); saveServiceNamesByCat(); }
+    if(m.priceList){ MASTERS.priceList=mergePriceList(MASTERS.priceList,m.priceList); savePriceListToStorage(); }
+    const after=JSON.stringify({wt:MASTERS.workTypes,sc:MASTERS.serviceCategories,sn:MASTERS.staffNames,snc:MASTERS.serviceNamesByCat,pl:MASTERS.priceList});
+    changed = before!==after;
     refreshFormSelects();
     if(document.getElementById('adminPanel').style.display!=='none') renderAllMasterLists();
+    // ஒரு கணினியில் மட்டும் இருந்த தரவு merge-ஆல் இப்போது கிடைத்திருந்தால் (அல்லது இந்த
+    // கணினியின் local மாற்றம் இதுவரை Drive-க்கு போகவில்லை என்றால்) மட்டும் திரும்ப சேமிக்கவும்
+    if(changed) await pushMastersToCloud();
   }catch(err){ console.error(err); }
 }
 
@@ -1259,6 +1462,7 @@ document.querySelectorAll('nav button').forEach(btn=>{
     });
     if(btn.dataset.tab==='list') renderRecordsTable();
     if(btn.dataset.tab==='staff'){ populateStaffPageSelect(); renderStaffPage(); }
+    if(btn.dataset.tab==='admin' && document.getElementById('adminPanel').style.display!=='none') renderAllMasterLists();
   });
 });
 
@@ -1511,6 +1715,8 @@ document.getElementById('adminLoginBtn').addEventListener('click', ()=>{
     document.getElementById('adminGate').style.display='none';
     document.getElementById('adminPanel').style.display='block';
     renderAllMasterLists();
+    plPopulateSelects();
+    renderPriceList();
     document.getElementById('scriptUrlInput').value=SCRIPT_URL;
   } else {
     toast('தவறான கடவுச்சொல்');
@@ -1557,16 +1763,18 @@ document.getElementById('forcePushBtn').addEventListener('click', async ()=>{
     await pullFromCloud(true);
     initNewForm(); // சரியான அடுத்த DHS எண்ணுடன்
 
-    // ஒவ்வொரு 60 வினாடிக்கும் தானாக Sync (படிவம் திருத்தப்படாத போது மட்டும்)
+    // ஒவ்வொரு 60 வினாடிக்கும் தானாக Sync — பணிகள் + வேலை வகை/சேவை/பணியாளர்/விலைப் பட்டியல்
+    // (masters) இரண்டும் — எல்லா கணினியிலும் ஒரே தரவு தெரிய
     setInterval(async ()=>{
       if(document.hidden) return;
       await pushPendingRecords();
       await pullFromCloud(true);
+      await pullMastersFromCloud();
     }, 60000);
 
-    // மற்றொரு tab/window-க்கு மாறி திரும்பி வரும்போது புதுப்பிக்கவும்
+    // மற்றொரு tab/window-க்கு மாறி திரும்பி வரும்போதும் புதுப்பிக்கவும்
     document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden) pullFromCloud(true);
+      if(!document.hidden){ pullFromCloud(true); pullMastersFromCloud(); }
     });
   } else {
     setSyncStatus('⚠️ Cloud Sync அமைக்கப்படவில்லை — தரவு இந்த கணினியில் மட்டும் இருக்கும்');
