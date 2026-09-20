@@ -1341,9 +1341,25 @@ function generateReceiptCanvasDataUrl(record){
 }
 
 /* ===================== WHATSAPP SEND — வாடிக்கையாளருக்கு ===================== */
+function hasPendingUploads(record){
+  return (record.doneDocs||[]).some(d=>d.dataUrl && !d.driveLink) ||
+         (record.workDocs||[]).some(d=>d.dataUrl && !d.driveLink) ||
+         (record.photo && record.photo.dataUrl && !record.photo.driveLink) ||
+         (record.signature && record.signature.dataUrl && !record.signature.driveLink);
+}
+
 async function sendCustomerWhatsApp(id){
   let record = await getRecordById(id);
   if(!record){toast('பணி கிடைக்கவில்லை');return;}
+
+  // "பதிவு செய்" அழுத்திய உடனேயே "அனுப்பு" அழுத்தினால், ஆவணம் இன்னும் Drive-க்கு
+  // பதிவேற்றம் முடியாமல் இருக்கலாம் (அது பின்னணியில் நடக்கும்) — அப்படி இருந்தால்
+  // இங்கே முதலில் முடிக்கவும், பிறகு தான் message தயார் செய்யவும்.
+  if(hasPendingUploads(record) && SCRIPT_URL){
+    toast('ஆவணம் Drive-க்கு பதிவேற்றப்படுகிறது... சற்று காத்திருக்கவும்');
+    await uploadRecordFiles(record);
+    record = await getRecordById(id) || record;
+  }
 
   let doneLink='';
   if(record.doneDocs && record.doneDocs.length && record.doneDocs[0].driveLink){
@@ -1381,11 +1397,17 @@ async function sendCustomerWhatsApp(id){
 }
 
 async function sendStaffWhatsApp(id){
-  const record = await getRecordById(id);
+  let record = await getRecordById(id);
   if(!record){toast('பணி கிடைக்கவில்லை');return;}
   if(!record.staff){toast('பணியாளர் தேர்வு செய்யப்படவில்லை');return;}
   const staffMobile = getStaffMobile(record.staff).replace(/\D/g,'');
   if(!staffMobile){toast('இந்த பணியாளருக்கு மொபைல் நம்பர் நிர்வாகத்தில் சேர்க்கப்படவில்லை');return;}
+
+  if(hasPendingUploads(record) && SCRIPT_URL){
+    toast('ஆவணம் Drive-க்கு பதிவேற்றப்படுகிறது... சற்று காத்திருக்கவும்');
+    await uploadRecordFiles(record);
+    record = await getRecordById(id) || record;
+  }
 
   let link='';
   if(record.workDocs && record.workDocs.length && record.workDocs[0].driveLink) link=record.workDocs[0].driveLink;
