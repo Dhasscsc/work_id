@@ -1348,8 +1348,11 @@ async function sendCustomerWhatsApp(id){
   let doneLink='';
   if(record.doneDocs && record.doneDocs.length && record.doneDocs[0].driveLink){
     doneLink=record.doneDocs[0].driveLink;
-  } else if(record.workDocs && record.workDocs.length && record.workDocs[0].driveLink){
-    doneLink=record.workDocs[0].driveLink;
+  }
+  // குறிப்பு: வாடிக்கையாளருக்கு "முடிந்த ஆவணம்" என அனுப்பப்படுவது doneDocs-இலிருந்து
+  // மட்டுமே வர வேண்டும் — workDocs (வேலை ஆவணம்) அதற்கு பதிலாக அனுப்பப்படக்கூடாது.
+  if(!doneLink && record.status==='முடிந்தது'){
+    toast('⚠️ இந்த பணிக்கு "முடிந்த ஆவணம்" இன்னும் பதிவேற்றப்படவில்லை — சரிபார்க்கவும்');
   }
 
   if(!record.receiptLink && SCRIPT_URL){
