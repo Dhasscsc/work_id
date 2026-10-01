@@ -554,14 +554,34 @@ function populateSelect(selectEl, arr, placeholder){
     selectEl.appendChild(opt);
   });
 }
+/* தேர்வு பட்டியலில் இல்லாத மதிப்பாக இருந்தாலும் (பழைய/நீக்கிய master) இழக்காமல் அமைக்கும் */
+function setSelectValue(selectEl, val){
+  val = val || '';
+  if(val && ![...selectEl.options].some(o=>o.value===val)){
+    const opt=document.createElement('option'); opt.value=val; opt.textContent=val;
+    selectEl.appendChild(opt);
+  }
+  selectEl.value = val;
+}
 function refreshFormSelects(){
-  populateSelect(document.getElementById('f_worktype'), MASTERS.workTypes, '-- தேர்வு செய்யவும் --');
-  populateSelect(document.getElementById('f_svccat'), MASTERS.serviceCategories, '-- தேர்வு செய்யவும் --');
+  // பட்டியலை மீண்டும் உருவாக்கும் முன் தற்போதைய தேர்வுகளை நினைவில் வைக்கவும் —
+  // (Sync/tab மாற்றம் நடக்கும்போது படிவத்தில் தேர்ந்தெடுத்தவை அழியக்கூடாது)
+  const wtEl=document.getElementById('f_worktype'), scEl=document.getElementById('f_svccat'),
+        snEl=document.getElementById('f_svcname'), stEl=document.getElementById('f_staff');
+  const keep={ wt:wtEl.value, sc:scEl.value, sn:snEl.value, st:stEl.value };
+  populateSelect(wtEl, MASTERS.workTypes, '-- தேர்வு செய்யவும் --');
+  populateSelect(scEl, MASTERS.serviceCategories, '-- தேர்வு செய்யவும் --');
+  setSelectValue(wtEl, keep.wt);
+  setSelectValue(scEl, keep.sc);
   refreshServiceNameSelect();
-  populateSelect(document.getElementById('f_staff'), MASTERS.staffNames.map(s=>s.name), '-- தேர்வு செய்யவும் --');
+  setSelectValue(snEl, keep.sn);
+  populateSelect(stEl, MASTERS.staffNames.map(s=>s.name), '-- தேர்வு செய்யவும் --');
+  setSelectValue(stEl, keep.st);
   const fw=document.getElementById('filterWorktype');
+  const fwKeep=fw.value;
   fw.innerHTML='<option value="">அனைத்து வேலை வகை</option>';
   MASTERS.workTypes.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;fw.appendChild(o);});
+  fw.value=fwKeep;
   if(typeof populateStaffPageSelect==='function') populateStaffPageSelect();
 }
 function refreshServiceNameSelect(){
@@ -1162,6 +1182,15 @@ async function pullFromCloud(silent){
     let added=0, updated=0;
     for(const cr of cloudRecords){
       const local=localMap[cr.id];
+      // Sheet தேதி/நேரத்தை ISO வடிவில் (2026-09-14T18:30:00.000Z) திருப்பினால் சரி செய்யவும்
+      if(/^\d{4}-\d{2}-\d{2}T/.test(String(cr.date||''))){
+        if(local && local.date && !/^\d{4}-\d{2}-\d{2}T/.test(String(local.date))) cr.date=local.date;
+        else cr.date=new Date(cr.date).toLocaleDateString('ta-IN');
+      }
+      if(/^\d{4}-\d{2}-\d{2}T/.test(String(cr.time||''))){
+        if(local && local.time && !/^\d{4}-\d{2}-\d{2}T/.test(String(local.time))) cr.time=local.time;
+        else cr.time='';
+      }
       if(!local){
         await dbPut(cr); added++;
       } else {
@@ -1262,8 +1291,10 @@ async function pullMastersFromCloud(){
     if(m.priceList){ MASTERS.priceList=mergePriceList(MASTERS.priceList,m.priceList); savePriceListToStorage(); }
     const after=JSON.stringify({wt:MASTERS.workTypes,sc:MASTERS.serviceCategories,sn:MASTERS.staffNames,snc:MASTERS.serviceNamesByCat,pl:MASTERS.priceList});
     changed = before!==after;
-    refreshFormSelects();
-    if(document.getElementById('adminPanel').style.display!=='none') renderAllMasterLists();
+    if(changed){
+      refreshFormSelects();
+      if(document.getElementById('adminPanel').style.display!=='none') renderAllMasterLists();
+    }
     // ஒரு கணினியில் மட்டும் இருந்த தரவு merge-ஆல் இப்போது கிடைத்திருந்தால் (அல்லது இந்த
     // கணினியின் local மாற்றம் இதுவரை Drive-க்கு போகவில்லை என்றால்) மட்டும் திரும்ப சேமிக்கவும்
     if(changed) await pushMastersToCloud();
@@ -1698,11 +1729,11 @@ async function editRecord(id){
   document.getElementById('f_custname').value=r.custname;
   document.getElementById('f_mobile').value=r.mobile;
   refreshFormSelects();
-  document.getElementById('f_worktype').value=r.worktype||'';
-  document.getElementById('f_svccat').value=r.svccat||'';
+  setSelectValue(document.getElementById('f_worktype'), r.worktype);
+  setSelectValue(document.getElementById('f_svccat'), r.svccat);
   refreshServiceNameSelect();
-  document.getElementById('f_svcname').value=r.svcname||'';
-  document.getElementById('f_staff').value=r.staff||'';
+  setSelectValue(document.getElementById('f_svcname'), r.svcname);
+  setSelectValue(document.getElementById('f_staff'), r.staff);
   document.getElementById('f_refno').value=r.refno||'';
   document.getElementById('f_fee').value=r.fee||0;
   document.getElementById('f_advance').value=r.advance||0;
